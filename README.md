@@ -10,7 +10,8 @@
 </p>
 
 <p align="center">
-  <a href="https://everettjf.github.io/Translayr/">🌐 Website</a>
+  <a href="https://everettjf.github.io/Translayr/">🌐 Website</a> ·
+  <a href="docs/blog/introducing-translayr.md">📝 Read the intro</a>
 </p>
 
 Translayr lives in your menu bar and works in **any** app. Two things, one shortcut each:
@@ -18,7 +19,7 @@ Translayr lives in your menu bar and works in **any** app. Two things, one short
 - **Read** — select foreign text, hit a shortcut, and a translation pops up next to it.
 - **Write** — type in your own language, hit a shortcut, and it’s **rewritten in place** into the target language, ready to send.
 
-Translation runs through a local model (**Ollama**) for full privacy, or any **OpenAI-compatible** endpoint for speed.
+Translation runs through a local model (**Ollama**) for full privacy, or any **OpenAI-compatible** endpoint for speed. No browser tab, no copy-paste into a translation site — your selection stays where it is, and (with Ollama) never leaves your Mac.
 
 <p align="center">
   <img src="docs/screenshots/rewrite.gif" alt="Type Chinese, press ⌥R, and it is rewritten into English in place" width="760" />
@@ -46,6 +47,20 @@ Translation runs through a local model (**Ollama**) for full privacy, or any **O
 - **Local or cloud** — pluggable backends: **Ollama** (offline, private) or any **OpenAI-compatible** API (`/chat/completions`, streaming). Switch in Settings.
 - **Styles** — Faithful, Formal, Casual, or Polished, independently for read and rewrite.
 - **Menu-bar only** — no Dock clutter. Global shortcuts, launch at login, per-app skip list.
+
+## 💡 Why Translayr
+
+| | Translayr | Browser translate sites | Built-in macOS translate |
+|---|---|---|---|
+| Works in any app (mail, chat, IDE, terminal) | ✅ | ❌ (paste in/out) | ⚠️ menu only |
+| Rewrite **in place** for replies | ✅ | ❌ | ❌ |
+| Runs 100% offline / private | ✅ (Ollama) | ❌ | ⚠️ |
+| Bring your own model / endpoint | ✅ | ❌ | ❌ |
+| Streaming output | ✅ | ⚠️ | ❌ |
+
+## 🌍 Languages
+
+Detection and translation cover the 10 most-spoken languages: **English, Chinese, Hindi, Spanish, French, Arabic, Bengali, Russian, Portuguese, Indonesian.** Pick your native language and a target in **Settings → Language**; the read direction is auto-detected.
 
 ## 🚀 Quick start
 
