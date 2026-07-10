@@ -89,7 +89,7 @@ private struct SelectionIconView: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "character.textbox.badge.sparkles")
+            Image(systemName: BrandIcon.symbolName)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(width: 28, height: 28)
