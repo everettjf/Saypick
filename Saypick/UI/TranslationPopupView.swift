@@ -52,7 +52,7 @@ struct TranslationPopupView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: "character.textbox.badge.sparkles")
+            Image(systemName: BrandIcon.symbolName)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.blue.opacity(0.85))
             Text("Saypick")

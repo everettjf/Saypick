@@ -25,7 +25,7 @@ struct AboutView: View {
             Spacer()
 
             // App Icon
-            Image(systemName: "character.textbox.badge.sparkles")
+            Image(systemName: BrandIcon.symbolName)
                 .font(.system(size: 80))
                 .foregroundStyle(
                     LinearGradient(
