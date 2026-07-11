@@ -53,9 +53,12 @@ enum PopupPositioner {
     }
 
     /// AX 矩形（左上原点）→ Cocoa 矩形（左下原点），支持多屏。
+    /// 两套坐标都以主屏（screens[0]，origin 恒为 0,0）为基准互为上下翻转，
+    /// 必须用主屏高度翻转；用全局 maxY 会在副屏更高/更靠上时整体偏移，
+    /// 弹窗落到另一台显示器上（#4）。
     static func cocoaRect(fromAX axRect: CGRect) -> NSRect {
-        let globalMaxY = NSScreen.screens.map { $0.frame.maxY }.max() ?? (NSScreen.main?.frame.height ?? 0)
-        let cocoaY = globalMaxY - axRect.origin.y - axRect.size.height
+        let primaryHeight = NSScreen.screens.first?.frame.maxY ?? (NSScreen.main?.frame.height ?? 0)
+        let cocoaY = primaryHeight - axRect.origin.y - axRect.size.height
         return NSRect(x: axRect.origin.x, y: cocoaY, width: axRect.size.width, height: axRect.size.height)
     }
 }
