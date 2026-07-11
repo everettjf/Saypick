@@ -1,0 +1,353 @@
+#include "Translator.h"
+#include "Http.h"
+#include "Json.h"
+#include "Settings.h"
+#include "Util.h"
+#include <atomic>
+#include <condition_variable>
+#include <list>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <thread>
+#include <unordered_map>
+
+namespace translator {
+
+namespace {
+
+// ---------- 提示词 ----------
+
+std::string styleSuffix(RewriteStyle style) {
+    const char* ins = lang::StyleInstruction(style);
+    return *ins ? std::string(" ") + ins : std::string();
+}
+
+// ---------- LRU 缓存（key = backend|from|to|style|text）----------
+
+class Cache {
+public:
+    static Cache& shared() {
+        static Cache c;
+        return c;
+    }
+
+    std::optional<std::wstring> get(const std::string& key) {
+        std::lock_guard lock(mu_);
+        auto it = map_.find(key);
+        if (it == map_.end()) return std::nullopt;
+        order_.splice(order_.end(), order_, it->second.orderIt);
+        return it->second.value;
+    }
+
+    void set(const std::string& key, const std::wstring& value) {
+        std::lock_guard lock(mu_);
+        auto it = map_.find(key);
+        if (it != map_.end()) {
+            it->second.value = value;
+            order_.splice(order_.end(), order_, it->second.orderIt);
+            return;
+        }
+        order_.push_back(key);
+        map_[key] = {value, std::prev(order_.end())};
+        while (map_.size() > kCapacity) {
+            map_.erase(order_.front());
+            order_.pop_front();
+        }
+    }
+
+    void clear() {
+        std::lock_guard lock(mu_);
+        map_.clear();
+        order_.clear();
+    }
+
+private:
+    static constexpr size_t kCapacity = 200;
+    struct Entry {
+        std::wstring value;
+        std::list<std::string>::iterator orderIt;
+    };
+    std::mutex mu_;
+    std::unordered_map<std::string, Entry> map_;
+    std::list<std::string> order_;
+};
+
+std::string cacheKey(const TranslationRequest& req, const char* backend) {
+    std::string k = backend;
+    k += '|';
+    k += req.source ? lang::Code(*req.source) : "auto";
+    k += '|';
+    k += lang::Code(req.target);
+    k += '|';
+    k += lang::StyleCode(req.style);
+    k += '|';
+    k += util::Narrow(req.text);
+    return k;
+}
+
+// ---------- 流式行组装（NDJSON / SSE 都按行切）----------
+
+class LineAssembler {
+public:
+    /// 喂入一块字节，产出完整行（不含换行符）
+    void feed(const char* data, size_t len, const std::function<void(const std::string&)>& onLine) {
+        // 容忍流最前面的 UTF-8 BOM
+        if (buf_.empty() && !bomChecked_ && len >= 3 &&
+            (unsigned char)data[0] == 0xEF && (unsigned char)data[1] == 0xBB && (unsigned char)data[2] == 0xBF) {
+            data += 3;
+            len -= 3;
+        }
+        bomChecked_ = true;
+        buf_.append(data, len);
+        size_t pos;
+        while ((pos = buf_.find('\n')) != std::string::npos) {
+            std::string line = buf_.substr(0, pos);
+            buf_.erase(0, pos + 1);
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (!line.empty()) onLine(line);
+        }
+    }
+
+private:
+    std::string buf_;
+    bool bomChecked_ = false;
+};
+
+// ---------- 活跃请求管理 ----------
+
+struct ActiveRequest {
+    std::shared_ptr<std::atomic<bool>> cancel;
+};
+
+std::mutex g_mu;
+std::unordered_map<uint64_t, ActiveRequest> g_active;
+std::atomic<uint64_t> g_nextId{1};
+
+void finishRequest(uint64_t id) {
+    std::lock_guard lock(g_mu);
+    g_active.erase(id);
+}
+
+// ---------- provider 实现（工作线程内运行）----------
+
+struct StreamOutcome {
+    bool ok = false;
+    std::wstring error;
+    std::wstring full;
+};
+
+StreamOutcome runOllama(const TranslationRequest& req, uint64_t id, const DeltaFn& onDelta,
+                        const std::atomic<bool>& cancel) {
+    StreamOutcome out;
+    const Settings& s = Settings::shared();
+
+    json::Object options;
+    options["temperature"] = 0.3;
+    options["top_p"] = 0.9;
+    options["top_k"] = 40;
+
+    json::Object body;
+    body["model"] = s.ollamaModel;
+    body["prompt"] = PlainPrompt(req.text, req.target, req.source, req.style);
+    body["stream"] = true;
+    body["options"] = json::Value(std::move(options));
+
+    std::wstring url = util::Widen(s.ollamaHost) + L":" + std::to_wstring(s.ollamaPort) + L"/api/generate";
+
+    LineAssembler lines;
+    auto onChunk = [&](const char* data, size_t len) {
+        lines.feed(data, len, [&](const std::string& line) {
+            bool ok = false;
+            json::Value v = json::Parse(line, &ok);
+            if (!ok) return;
+            const std::string& delta = v["response"].asString();
+            if (!delta.empty()) {
+                std::wstring wdelta = util::Widen(delta);
+                out.full += wdelta;
+                onDelta(id, wdelta);
+            }
+        });
+    };
+
+    http::Result r = http::PostStream(url, json::Value(std::move(body)).dump(), L"", onChunk, cancel);
+    if (!r.ok) {
+        out.error = r.status == 0 && !cancel.load()
+                        ? L"Can't reach Ollama — is `ollama serve` running?"
+                        : util::Widen(r.error);
+        return out;
+    }
+    out.ok = true;
+    return out;
+}
+
+StreamOutcome runOpenAI(const TranslationRequest& req, uint64_t id, const DeltaFn& onDelta,
+                        const std::atomic<bool>& cancel) {
+    StreamOutcome out;
+    const Settings& s = Settings::shared();
+
+    if (s.openAIKey.empty()) {
+        out.error = L"Missing OpenAI API key";
+        return out;
+    }
+
+    std::string base = s.openAIBaseURL;
+    while (!base.empty() && base.back() == '/') base.pop_back();
+
+    json::Array messages;
+    {
+        json::Object sys;
+        sys["role"] = "system";
+        sys["content"] = SystemPrompt(req.target, req.source, req.style);
+        messages.push_back(json::Value(std::move(sys)));
+        json::Object user;
+        user["role"] = "user";
+        user["content"] = util::Narrow(req.text);
+        messages.push_back(json::Value(std::move(user)));
+    }
+    json::Object body;
+    body["model"] = s.openAIModel;
+    body["stream"] = true;
+    body["temperature"] = 0.3;
+    body["messages"] = json::Value(std::move(messages));
+
+    std::wstring headers = L"Authorization: Bearer " + util::Widen(s.openAIKey) + L"\r\n";
+
+    LineAssembler lines;
+    auto onChunk = [&](const char* data, size_t len) {
+        lines.feed(data, len, [&](const std::string& line) {
+            if (line.rfind("data:", 0) != 0) return;
+            std::string payload = util::Trim(line.substr(5));
+            if (payload == "[DONE]") return;
+            bool ok = false;
+            json::Value v = json::Parse(payload, &ok);
+            if (!ok) return;
+            const json::Value& delta = v["choices"].at(0)["delta"]["content"];
+            if (delta.isString() && !delta.asString().empty()) {
+                std::wstring wdelta = util::Widen(delta.asString());
+                out.full += wdelta;
+                onDelta(id, wdelta);
+            }
+        });
+    };
+
+    http::Result r = http::PostStream(util::Widen(base) + L"/chat/completions",
+                                      json::Value(std::move(body)).dump(), headers, onChunk, cancel);
+    if (!r.ok) {
+        out.error = util::Widen(r.error);
+        return out;
+    }
+    out.ok = true;
+    return out;
+}
+
+const char* backendId() {
+    return Settings::shared().backend == TranslationBackend::OpenAI ? "openai" : "ollama";
+}
+
+} // namespace
+
+std::string SystemPrompt(Language target, std::optional<Language> source, RewriteStyle style) {
+    std::string from = source ? lang::PromptName(*source) : "the detected language";
+    std::string s = "You are a professional translation engine. Translate the user's text from ";
+    s += from;
+    s += " into ";
+    s += lang::PromptName(target);
+    s += ".";
+    s += styleSuffix(style);
+    s += " Output ONLY the translation, with no quotes, no explanations, no extra notes. "
+         "Preserve the original meaning and formatting.";
+    return s;
+}
+
+std::string PlainPrompt(const std::wstring& text, Language target, std::optional<Language> source, RewriteStyle style) {
+    std::string from = source ? lang::PromptName(*source) : "the source language";
+    std::string s = "Translate the following text from ";
+    s += from;
+    s += " to ";
+    s += lang::PromptName(target);
+    s += ".";
+    s += styleSuffix(style);
+    s += " Only output the translation, no explanation.\n\n";
+    s += util::Narrow(text);
+    return s;
+}
+
+uint64_t Stream(const TranslationRequest& req, DeltaFn onDelta, DoneFn onDone) {
+    uint64_t id = g_nextId.fetch_add(1);
+
+    // 缓存命中：同步回调全文
+    std::string key = cacheKey(req, backendId());
+    if (auto cached = Cache::shared().get(key)) {
+        onDelta(id, *cached);
+        onDone(id, true, L"");
+        return id;
+    }
+
+    auto cancel = std::make_shared<std::atomic<bool>>(false);
+    {
+        std::lock_guard lock(g_mu);
+        g_active[id] = {cancel};
+    }
+
+    std::thread([req, id, key, cancel, onDelta = std::move(onDelta), onDone = std::move(onDone)] {
+        StreamOutcome out = Settings::shared().backend == TranslationBackend::OpenAI
+                                ? runOpenAI(req, id, onDelta, *cancel)
+                                : runOllama(req, id, onDelta, *cancel);
+        bool cancelled = cancel->load();
+        finishRequest(id);
+        if (cancelled) return;  // 取消的请求不再回调
+        if (out.ok) {
+            std::wstring cleaned = util::Trim(out.full);
+            if (!cleaned.empty()) Cache::shared().set(key, cleaned);
+            onDone(id, true, L"");
+        } else {
+            onDone(id, false, out.error);
+        }
+    }).detach();
+
+    return id;
+}
+
+void Cancel(uint64_t reqId) {
+    std::lock_guard lock(g_mu);
+    auto it = g_active.find(reqId);
+    if (it != g_active.end()) it->second.cancel->store(true);
+}
+
+std::optional<std::wstring> TranslateFully(const TranslationRequest& req, std::wstring* error) {
+    std::mutex mu;
+    std::condition_variable cv;
+    bool done = false, ok = false;
+    std::wstring full, err;
+
+    Stream(
+        req,
+        [&](uint64_t, const std::wstring& delta) {
+            std::lock_guard lock(mu);
+            full += delta;
+        },
+        [&](uint64_t, bool success, const std::wstring& e) {
+            std::lock_guard lock(mu);
+            ok = success;
+            err = e;
+            done = true;
+            cv.notify_all();
+        });
+
+    std::unique_lock lock(mu);
+    cv.wait(lock, [&] { return done; });
+
+    std::wstring cleaned = util::Trim(full);
+    if (!ok || cleaned.empty()) {
+        if (error) *error = ok ? L"Empty translation" : err;
+        return std::nullopt;
+    }
+    return cleaned;
+}
+
+void ClearCacheForTesting() {
+    Cache::shared().clear();
+}
+
+} // namespace translator

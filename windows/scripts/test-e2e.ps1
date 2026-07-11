@@ -1,0 +1,128 @@
+﻿# 端到端冒烟测试：真实驱动 Saypick.exe + 自建编辑窗口 + mock 后端。
+# 前置：mock-openai.ps1 已在 8199 端口运行；SAYPICK_DATA_DIR 指向含
+# openai/8199 配置的测试目录（Alt+D 读、Alt+R 写、rewritePreview=false）。
+param(
+    [string]$Exe = "$PSScriptRoot\..\build\Saypick.exe",
+    [string]$Expected = "MOCK_TRANSLATION_OK"
+)
+$ErrorActionPreference = "Stop"
+
+Add-Type @"
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public static class Win {
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindowW(string cls, string title);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindowExW(IntPtr parent, IntPtr after, string cls, string title);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr SendMessageW(IntPtr h, uint m, IntPtr w, StringBuilder l);
+    [DllImport("user32.dll", EntryPoint="SendMessageW")] public static extern IntPtr SendMessageInt(IntPtr h, uint m, IntPtr w, IntPtr l);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+}
+"@
+
+function Send-Combo([byte[]]$mods, [byte]$vk) {
+    foreach ($m in $mods) { [Win]::keybd_event($m, 0, 0, [UIntPtr]::Zero) }
+    [Win]::keybd_event($vk, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 50
+    [Win]::keybd_event($vk, 0, 2, [UIntPtr]::Zero)
+    foreach ($m in $mods) { [Win]::keybd_event($m, 0, 2, [UIntPtr]::Zero) }
+}
+
+function Ensure-Foreground([IntPtr]$hwnd) {
+    # 后台进程直接 SetForegroundWindow 会被前台锁拒绝；
+    # 注入一次无害按键让本进程成为“最近输入来源”后即可切换。
+    for ($i = 0; $i -lt 10; $i++) {
+        [Win]::keybd_event(0x10, 0, 0, [UIntPtr]::Zero)   # Shift down
+        [Win]::keybd_event(0x10, 0, 2, [UIntPtr]::Zero)   # Shift up
+        [Win]::SetForegroundWindow($hwnd) | Out-Null
+        Start-Sleep -Milliseconds 150
+        if ([Win]::GetForegroundWindow() -eq $hwnd) { return $true }
+    }
+    return $false
+}
+
+function Get-WindowText([IntPtr]$hwnd) {
+    $sb = New-Object System.Text.StringBuilder 8192
+    [Win]::SendMessageW($hwnd, 0x000D, [IntPtr]8192, $sb) | Out-Null   # WM_GETTEXT
+    return $sb.ToString()
+}
+
+$VK_MENU = 0x12; $VK_CONTROL = 0x11; $VK_ESCAPE = 0x1B
+$NUL = [NullString]::Value   # PowerShell 会把 $null 封送成空串，必须用 NullString
+$failures = 0
+function Check([bool]$cond, [string]$name, [string]$detail = "") {
+    if ($cond) { Write-Output "  ok   $name" }
+    else { Write-Output "  FAIL $name $detail"; $script:failures++ }
+}
+
+Write-Output "[e2e] launching Saypick"
+$app = Start-Process -FilePath $Exe -PassThru
+Start-Sleep -Seconds 2
+Check (-not $app.HasExited) "app running"
+
+Write-Output "[e2e] launching edit host"
+$host2 = Start-Process powershell -ArgumentList "-NoProfile", "-File", "`"$PSScriptRoot\edit-host.ps1`"" -PassThru
+$hostHwnd = [IntPtr]::Zero
+for ($i = 0; $i -lt 60 -and $hostHwnd -eq [IntPtr]::Zero; $i++) {
+    Start-Sleep -Milliseconds 250
+    $hostHwnd = [Win]::FindWindowW($NUL, "SaypickTestHost")
+}
+Check ($hostHwnd -ne [IntPtr]::Zero) "edit host window found"
+$editHwnd = [Win]::FindWindowExW($hostHwnd, [IntPtr]::Zero, $NUL, $NUL)  # 第一个子窗口 = 文本框
+Check ($editHwnd -ne [IntPtr]::Zero) "edit control found"
+
+Write-Output "[e2e] setting Chinese text + selection"
+$sb = New-Object System.Text.StringBuilder
+[void]$sb.Append("你好世界，今天天气很好。")
+[Win]::SendMessageW($editHwnd, 0x000C, [IntPtr]::Zero, $sb) | Out-Null   # WM_SETTEXT
+Start-Sleep -Milliseconds 200
+Check ((Get-WindowText $editHwnd) -eq "你好世界，今天天气很好。") "text set in edit"
+Set-Clipboard -Value "剪贴板原始内容"   # 替换后应还原成它
+Check (Ensure-Foreground $hostHwnd) "edit host foregrounded"
+Start-Sleep -Milliseconds 300
+# EM_SETSEL 全选（消息级，确定性；注入 Ctrl+A 偶发丢失）
+[Win]::SendMessageInt($editHwnd, 0x00B1, [IntPtr]::Zero, [IntPtr](-1)) | Out-Null
+Start-Sleep -Milliseconds 300
+
+Write-Output "[e2e] Alt+D → popup"
+Send-Combo @($VK_MENU) 0x44      # Alt+D
+Start-Sleep -Seconds 3
+
+$popup = [Win]::FindWindowW("SaypickPopup", $NUL)
+Check ($popup -ne [IntPtr]::Zero) "popup window exists"
+if ($popup -ne [IntPtr]::Zero) {
+    $text = Get-WindowText $popup
+    Write-Output "  popup text: '$text'"
+    Check ($text -eq $Expected) "popup translation" "got '$text'"
+}
+
+Write-Output "[e2e] Esc closes popup"
+Send-Combo @() $VK_ESCAPE
+Start-Sleep -Milliseconds 800
+Check ([Win]::FindWindowW("SaypickPopup", $NUL) -eq [IntPtr]::Zero) "popup closed"
+
+Write-Output "[e2e] Alt+R → rewrite in place"
+Ensure-Foreground $hostHwnd | Out-Null
+Start-Sleep -Milliseconds 300
+[Win]::SendMessageInt($editHwnd, 0x00B1, [IntPtr]::Zero, [IntPtr](-1)) | Out-Null   # EM_SETSEL 全选
+Start-Sleep -Milliseconds 300
+Send-Combo @($VK_MENU) 0x52      # Alt+R
+Start-Sleep -Seconds 3
+
+$content = Get-WindowText $editHwnd
+Write-Output "  edit now: '$content'"
+Check ($content.Trim() -eq $Expected) "rewrite replaced text" "got '$content'"
+
+# 剪贴板应已还原为替换前内容
+$clip = Get-Clipboard -Raw
+Check ($clip -eq "剪贴板原始内容") "clipboard restored" "got '$clip'"
+
+Write-Output "[e2e] cleanup"
+Stop-Process -Id $host2.Id -Force -ErrorAction SilentlyContinue
+Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+
+if ($failures -gt 0) { Write-Output "`n$failures FAILURE(S)"; exit 1 }
+Write-Output "`nall e2e checks passed"
+exit 0
