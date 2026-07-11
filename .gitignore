@@ -7,12 +7,22 @@ build/
 *.pkg
 
 # Xcode
-Saypick.xcodeproj/project.xcworkspace/xcuserdata
-Saypick.xcodeproj/project.xcworkspace/xcshareddata
+macos/Saypick.xcodeproj/project.xcworkspace/xcuserdata
+macos/Saypick.xcodeproj/project.xcworkspace/xcshareddata
 *.xcuserstate
 xcuserdata/
 DerivedData/
 
+# Windows
+windows/build/
+windows/out/
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.msi
+.vs/
+CMakeUserPresets.json
 
 # macOS
 .DS_Store

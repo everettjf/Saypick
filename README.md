@@ -1,9 +1,11 @@
 <h1 align="center">Saypick</h1>
-<p align="center"><b>System-wide AI translation &amp; inline rewrite for macOS</b></p>
+<p align="center"><b>System-wide AI translation &amp; inline rewrite for macOS &amp; Windows</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-26+-black.svg" />
+  <img src="https://img.shields.io/badge/Windows-10+-0078d4.svg" />
   <img src="https://img.shields.io/badge/Swift-5.9+-orange.svg" />
+  <img src="https://img.shields.io/badge/C++-20-00599c.svg" />
   <img src="https://img.shields.io/badge/AI-Ollama%20%7C%20OpenAI--compatible-7c5cff.svg" />
   <img src="https://img.shields.io/badge/License-MIT-green.svg" />
   <a href="https://discord.com/invite/eGzEaP6TzR"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" /></a>
@@ -14,12 +16,12 @@
   <a href="docs/blog/introducing-saypick.md">📝 Read the intro</a>
 </p>
 
-Saypick lives in your menu bar and works in **any** app. Two things, one shortcut each:
+Saypick lives in your menu bar (macOS) or system tray (Windows) and works in **any** app. Two things, one shortcut each:
 
 - **Read** — select foreign text, hit a shortcut, and a translation pops up next to it.
 - **Write** — type in your own language, hit a shortcut, and it’s **rewritten in place** into the target language, ready to send.
 
-Translation runs through a local model (**Ollama**) for full privacy, or any **OpenAI-compatible** endpoint for speed. No browser tab, no copy-paste into a translation site — your selection stays where it is, and (with Ollama) never leaves your Mac.
+Translation runs through a local model (**Ollama**) for full privacy, or any **OpenAI-compatible** endpoint for speed. No browser tab, no copy-paste into a translation site — your selection stays where it is, and (with Ollama) never leaves your machine.
 
 <p align="center">
   <img src="docs/screenshots/rewrite.gif" alt="Type Chinese, press ⌥R, and it is rewritten into English in place" width="760" />
@@ -42,11 +44,12 @@ Translation runs through a local model (**Ollama**) for full privacy, or any **O
 
 - **Read · translate** — select text anywhere → popup with the translation. Trigger by shortcut, a floating icon next to the selection, or auto-translate on select.
 - **Write · rewrite in place** — write in your native language, press the rewrite shortcut, and the input field is replaced with the translation. Replace immediately or preview first.
-- **Works in every app** — uses the Accessibility API to read the selection, with a clipboard-copy fallback for Electron/web apps, so it works even where text APIs don’t. The original clipboard is always restored.
+- **Works in every app** — uses the Accessibility API (macOS) / UI Automation (Windows) to read the selection, with a clipboard-copy fallback for Electron/web apps, so it works even where text APIs don’t. The original clipboard is always restored.
 - **Undo-safe replacement** — replacements are pasted, preserving each app’s native undo stack.
 - **Local or cloud** — pluggable backends: **Ollama** (offline, private) or any **OpenAI-compatible** API (`/chat/completions`, streaming). Switch in Settings.
 - **Styles** — Faithful, Formal, Casual, or Polished, independently for read and rewrite.
-- **Menu-bar only** — no Dock clutter. Global shortcuts, launch at login, per-app skip list.
+- **Menu-bar / tray only** — no Dock or taskbar clutter. Global shortcuts, launch at login, per-app skip list.
+- **Native on both platforms** — SwiftUI on macOS, Win32 C++ on Windows. No Electron, no runtime.
 
 ## 💡 Why Saypick
 
@@ -76,35 +79,36 @@ ollama serve
 
 **2. Install Saypick**
 
-With [Homebrew](https://brew.sh) (recommended):
+macOS — with [Homebrew](https://brew.sh) (recommended):
 ```bash
 brew install --cask everettjf/saypick/saypick
 ```
+…or download the latest `.dmg` from [Releases](../../releases), drag it to Applications, and launch it. The build is signed and notarized by Apple.
 
-Or download the latest `.dmg` from [Releases](../../releases), drag it to Applications, and launch it. The build is signed and notarized by Apple.
+Windows — download the latest `Saypick-windows.zip` from [Releases](../../releases), unzip, and run `Saypick.exe` (or build it yourself, see below).
 
-**3. Grant Accessibility**
+**3. First run**
 
-On first launch, allow Saypick under **System Settings → Privacy & Security → Accessibility** (required to read selections and replace text). Then:
+macOS: allow Saypick under **System Settings → Privacy & Security → Accessibility** (required to read selections and replace text). Windows needs no special permission. Then:
 
-- Select text → **⌥D** → see the translation.
-- Type in your language → **⌥R** → it’s rewritten in place.
+- Select text → **⌥D** (macOS) / **Alt+D** (Windows) → see the translation.
+- Type in your language → **⌥R** / **Alt+R** → it’s rewritten in place.
 
 Shortcuts, triggers, styles, and languages are all configurable in **Settings**.
 
 ## ⌨️ Default shortcuts
 
-| Action | Shortcut |
-|---|---|
-| Translate selection (read) | <kbd>⌥</kbd><kbd>D</kbd> |
-| Rewrite & replace (write) | <kbd>⌥</kbd><kbd>R</kbd> |
+| Action | macOS | Windows |
+|---|---|---|
+| Translate selection (read) | <kbd>⌥</kbd><kbd>D</kbd> | <kbd>Alt</kbd><kbd>D</kbd> |
+| Rewrite & replace (write) | <kbd>⌥</kbd><kbd>R</kbd> | <kbd>Alt</kbd><kbd>R</kbd> |
 
 ## 🧠 How it works
 
 ```
 Select / type  ─►  Shortcut · floating icon · auto
                           │
-                 Capture (AX selection ─► clipboard fallback)
+      Capture (AX / UI Automation selection ─► clipboard fallback)
                           │
               Translate (Ollama / OpenAI-compatible, streaming)
                           │
@@ -114,21 +118,32 @@ Select / type  ─►  Shortcut · floating icon · auto
 ## 🏗️ Project structure
 
 ```
-Saypick/
-├── Core/          # SelectionCapture, TextReplacer, TriggerController,
-│                  # SelectionMonitor, PopupPositioner, LaunchAtLogin, …
-├── Translation/   # TranslationProvider, Ollama / OpenAI providers,
-│                  # TranslationService, cache, model resolver
-├── UI/            # Translation popup + floating selection icon
-├── Config/        # AppSettings, LanguageConfig
-├── Services/      # GlobalShortcutCenter, UpdateChecker, system service
-└── Views/         # Menu bar + Settings
+macos/                 # SwiftUI app (Xcode project)
+├── Saypick/
+│   ├── Core/          # SelectionCapture, TextReplacer, TriggerController,
+│   │                  # SelectionMonitor, PopupPositioner, LaunchAtLogin, …
+│   ├── Translation/   # TranslationProvider, Ollama / OpenAI providers,
+│   │                  # TranslationService, cache, model resolver
+│   ├── UI/            # Translation popup + floating selection icon
+│   ├── Config/        # AppSettings, LanguageConfig
+│   ├── Services/      # GlobalShortcutCenter, UpdateChecker, system service
+│   └── Views/         # Menu bar + Settings
+└── scripts/           # Release / notarization scripts
+
+windows/               # Native Win32 C++20 app (CMake)
+├── src/               # Tray, hotkeys, UIA capture, popup, providers,
+│                      # settings window, replacer, language detection
+└── assets/            # Icon
+
+docs/                  # GitHub Pages site + blog + screenshots
 ```
 
 ## 🔨 Build & release
 
+macOS:
 ```bash
-open Saypick.xcodeproj        # ⌘R to run
+cd macos
+open Saypick.xcodeproj          # ⌘R to run
 
 # Signed release + notarized DMG (configure .env from .env.template first)
 ./scripts/build-release.sh      # → build/Saypick.dmg
@@ -136,9 +151,18 @@ open Saypick.xcodeproj        # ⌘R to run
 
 Requirements: macOS 26+, Xcode 15+. The app is **not** sandboxed (it needs Accessibility + synthetic key events). For local dev builds, sign with your Apple Development team so the Accessibility grant persists across rebuilds.
 
+Windows:
+```powershell
+cd windows
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build             # → build/Saypick.exe
+```
+
+Requirements: Windows 10+, Visual Studio 2022+ (MSVC, CMake, Ninja). No third-party dependencies — pure Win32 + WinHTTP + UI Automation.
+
 ## 🔧 Troubleshooting
 
-- **Shortcut does nothing** → confirm Accessibility is granted (Settings → General shows *Granted*) and Saypick is enabled in the menu bar.
+- **Shortcut does nothing** → macOS: confirm Accessibility is granted (Settings → General shows *Granted*) and Saypick is enabled in the menu bar. Windows: another app may own the hotkey — pick a different one in Settings → Shortcuts.
 - **No translation** → Ollama: is `ollama serve` running and the model installed? (Saypick auto-picks an installed model if your configured one is missing.) OpenAI: check base URL / key / model.
 - **Misaligned popup in some apps** → those apps don’t expose text bounds; the popup falls back to the cursor position.
 - **“Can’t be opened on this Mac” on Sequoia or earlier** → Saypick requires **macOS 26+**. It’s built against the current SwiftUI menu-bar and Settings APIs, and keeping a single modern baseline is what lets a small project stay reliable. Support for older macOS isn’t planned right now.
@@ -150,4 +174,4 @@ Issues and PRs welcome. Join the [Discord](https://discord.com/invite/eGzEaP6TzR
 
 ## 📄 License
 
-[MIT](LICENSE) · Made with ❤️ for macOS. If Saypick helps you, a ⭐️ is appreciated!
+[MIT](LICENSE) · Made with ❤️ for macOS &amp; Windows. If Saypick helps you, a ⭐️ is appreciated!
