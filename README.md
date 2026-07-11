@@ -141,6 +141,8 @@ Requirements: macOS 26+, Xcode 15+. The app is **not** sandboxed (it needs Acces
 - **Shortcut does nothing** → confirm Accessibility is granted (Settings → General shows *Granted*) and Saypick is enabled in the menu bar.
 - **No translation** → Ollama: is `ollama serve` running and the model installed? (Saypick auto-picks an installed model if your configured one is missing.) OpenAI: check base URL / key / model.
 - **Misaligned popup in some apps** → those apps don’t expose text bounds; the popup falls back to the cursor position.
+- **“Can’t be opened on this Mac” on Sequoia or earlier** → Saypick requires **macOS 26+**. It’s built against the current SwiftUI menu-bar and Settings APIs, and keeping a single modern baseline is what lets a small project stay reliable. Support for older macOS isn’t planned right now.
+- **Which language goes where?** → In **Settings → Language**, pick your **native** and **foreign** language (there is no “source/target” pair to get backwards). Each shortcut has its own direction; **auto** detects the selected text and translates the other way.
 
 ## 🤝 Contributing
 
