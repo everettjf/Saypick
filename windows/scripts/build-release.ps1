@@ -1,4 +1,4 @@
-# Windows 发布构建：Release exe + Inno Setup 安装包 + 便携 zip。
+﻿# Windows 发布构建：Release exe + Inno Setup 安装包 + 便携 zip。
 # 版本号读根目录 VERSION 文件（用 scripts/bump-version.sh 递增）。
 # 产物：
 #   windows/build/Saypick.exe
@@ -24,7 +24,12 @@ $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
 if (-not $iscc) { throw "Inno Setup 6 not found (winget install JRSoftware.InnoSetup)" }
 
 # --- 构建 exe（版本号已由 bump-version.sh 写进 CMakeLists/rc/manifest）---
-cmd /c "`"$devcmd`" -arch=amd64 -no_logo && cd /d `"$win`" && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build"
+# VsDevCmd 内部会往 stderr 吐无害噪音（vswhere 提示）；在 Stop 策略 + 管道下
+# 会被 PowerShell 当成致命错误，这里临时放宽，靠退出码判断成败。
+$eap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+cmd /c "`"$devcmd`" -arch=amd64 -no_logo 2>nul && cd /d `"$win`" && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build" 2>&1 | ForEach-Object { "$_" }
+$ErrorActionPreference = $eap
 if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
 $exe = Join-Path $win "build\Saypick.exe"
 if (-not (Test-Path $exe)) { throw "Saypick.exe not produced" }
