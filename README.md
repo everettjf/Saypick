@@ -13,7 +13,8 @@
 
 <p align="center">
   <a href="https://everettjf.github.io/Saypick/">🌐 Website</a> ·
-  <a href="docs/blog/introducing-saypick.md">📝 Read the intro</a>
+  <a href="docs/blog/introducing-saypick.md">📝 Read the intro</a> ·
+  <b>English</b> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 Saypick lives in your menu bar (macOS) or system tray (Windows) and works in **any** app. Two things, one shortcut each:
@@ -47,13 +48,14 @@ Translation runs through a local model (**Ollama**) for full privacy, or any **O
 - **Works in every app** — uses the Accessibility API (macOS) / UI Automation (Windows) to read the selection, with a clipboard-copy fallback for Electron/web apps, so it works even where text APIs don’t. The original clipboard is always restored.
 - **Undo-safe replacement** — replacements are pasted, preserving each app’s native undo stack.
 - **Local or cloud** — pluggable backends: **Ollama** (offline, private) or any **OpenAI-compatible** API (`/chat/completions`, streaming). Switch in Settings.
+- **Model picker** — Settings lists your installed Ollama models; if the configured model isn't installed, Saypick auto-selects one so it works out of the box. Thinking models (qwen3 family, …) are handled — hidden reasoning is disabled so translations stay instant.
 - **Styles** — Faithful, Formal, Casual, or Polished, independently for read and rewrite.
 - **Menu-bar / tray only** — no Dock or taskbar clutter. Global shortcuts, launch at login, per-app skip list.
 - **Native on both platforms** — SwiftUI on macOS, Win32 C++ on Windows. No Electron, no runtime.
 
 ## 💡 Why Saypick
 
-| | Saypick | Browser translate sites | Built-in macOS translate |
+| | Saypick | Browser translate sites | OS built-in translate |
 |---|---|---|---|
 | Works in any app (mail, chat, IDE, terminal) | ✅ | ❌ (paste in/out) | ⚠️ menu only |
 | Rewrite **in place** for replies | ✅ | ❌ | ❌ |
@@ -69,13 +71,15 @@ Detection and translation cover the 10 most-spoken languages: **English, Chinese
 
 **1. Pick a backend**
 
-Local (private, offline):
+Local (private, offline) — install [Ollama](https://ollama.com/download), then:
 ```bash
-brew install ollama
+# macOS: brew install ollama · Windows: winget install Ollama.Ollama
 ollama pull qwen2.5:3b   # or any chat model you like
-ollama serve
+ollama serve             # usually already running as a service
 ```
 …or cloud: in **Settings → Backend**, choose *OpenAI-compatible* and enter your base URL, API key, and model.
+
+Saypick lists your installed models in **Settings → Backend** and auto-picks an installed one if the configured model is missing — pulling *any* chat model is enough to get going.
 
 **2. Install Saypick**
 
@@ -85,7 +89,7 @@ brew install --cask everettjf/saypick/saypick
 ```
 …or download the latest `.dmg` from [Releases](../../releases), drag it to Applications, and launch it. The build is signed and notarized by Apple.
 
-Windows — download the latest `Saypick-windows.zip` from [Releases](../../releases), unzip, and run `Saypick.exe` (or build it yourself, see below).
+Windows — download the latest `Saypick-windows.zip` from [Releases](../../releases), unzip, and run `Saypick.exe` (or build it yourself in a minute, see below). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
 
 **3. First run**
 
@@ -158,12 +162,13 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build             # → build/Saypick.exe
 ```
 
-Requirements: Windows 10+, Visual Studio 2022+ (MSVC, CMake, Ninja). No third-party dependencies — pure Win32 + WinHTTP + UI Automation.
+Requirements: Windows 10+, Visual Studio 2022+ (MSVC, CMake, Ninja). No third-party dependencies — pure Win32 + WinHTTP + UI Automation. See [windows/README.md](windows/README.md) for architecture and the test harness.
 
 ## 🔧 Troubleshooting
 
 - **Shortcut does nothing** → macOS: confirm Accessibility is granted (Settings → General shows *Granted*) and Saypick is enabled in the menu bar. Windows: another app may own the hotkey — pick a different one in Settings → Shortcuts.
 - **No translation** → Ollama: is `ollama serve` running and the model installed? (Saypick auto-picks an installed model if your configured one is missing.) OpenAI: check base URL / key / model.
+- **Translation is very slow on a qwen3-class model** → Saypick already disables hidden “thinking” for Ollama models; if it still crawls, the model may simply be too big for your hardware — try a smaller one from the dropdown in **Settings → Backend**.
 - **Misaligned popup in some apps** → those apps don’t expose text bounds; the popup falls back to the cursor position.
 - **“Can’t be opened on this Mac” on Sequoia or earlier** → Saypick requires **macOS 26+**. It’s built against the current SwiftUI menu-bar and Settings APIs, and keeping a single modern baseline is what lets a small project stay reliable. Support for older macOS isn’t planned right now.
 - **Which language goes where?** → In **Settings → Language**, pick your **native** and **foreign** language (there is no “source/target” pair to get backwards). Each shortcut has its own direction; **auto** detects the selected text and translates the other way.
@@ -174,4 +179,4 @@ Issues and PRs welcome. Join the [Discord](https://discord.com/invite/eGzEaP6TzR
 
 ## 📄 License
 
-[MIT](LICENSE) · Made with ❤️ for macOS &amp; Windows. If Saypick helps you, a ⭐️ is appreciated!
+[MIT](LICENSE) · Made with ❤️ for macOS & Windows. If Saypick helps you, a ⭐️ is appreciated!
