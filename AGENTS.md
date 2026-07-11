@@ -79,8 +79,24 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
 
 ## Releases
 
-Ship as notarized DMGs (macOS) and zipped exe (Windows) on **GitHub Releases
-at `everettjf/Saypick`** (where `UpdateChecker` also checks). Keep `README.md`
-free of the app's release version — link to `../../releases`, refer to build
-outputs as `build/Saypick.dmg` / `build/Saypick.exe`, never a pinned `X.Y.Z`.
-Platform/dependency versions (macOS 26+, Windows 10+, Swift 5.9+, C++20) are fine.
+Both platforms share ONE version: the root `VERSION` file, synced everywhere by
+`scripts/bump-version.sh` (default patch+1; `--minor` / `--major` / explicit).
+It writes pbxproj MARKETING_VERSION, windows CMakeLists/rc/manifest — when
+touching the manifest remember only the app's own assemblyIdentity may change;
+the Common-Controls `version="6.0.0.0"` must stay or the exe fails SxS at start.
+
+Release per platform, either order, onto the same `vX.Y.Z` tag:
+- `scripts/release-windows.ps1` (on Windows) → builds via
+  `windows/scripts/build-release.ps1` (Release exe + self-test gate + Inno
+  Setup installer from `windows/installer/Saypick.iss` + portable zip), then
+  `gh release create`-if-missing + upload.
+- `scripts/release-macos.sh` (on a Mac) → notarized DMG via
+  `macos/scripts/build-release.sh`, then create-if-missing + upload
+  `Saypick-X.Y.Z.dmg`.
+Both need `gh auth login` once. `UpdateChecker` (both apps) reads
+`releases/latest` at `everettjf/Saypick`.
+
+Keep `README.md` free of the app's release version — link to `../../releases`,
+refer to artifacts as `Saypick-Setup-x.y.z.exe` / `build/Saypick.dmg` style,
+never a pinned literal version. Platform/dependency versions (macOS 26+,
+Windows 10+, Swift 5.9+, C++20) are fine.

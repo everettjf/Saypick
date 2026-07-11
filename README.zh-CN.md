@@ -89,7 +89,7 @@ brew install --cask everettjf/saypick/saypick
 ```
 ……或者从 [Releases](../../releases) 下载最新 `.dmg`，拖进「应用程序」后启动。安装包已由 Apple 签名和公证。
 
-Windows——从 [Releases](../../releases) 下载最新 `Saypick-windows.zip`，解压运行 `Saypick.exe`（也可以一分钟自己编译，见下文）。如果 SmartScreen 提示无法识别的应用，点**更多信息 → 仍要运行**。
+Windows——从 [Releases](../../releases) 下载最新的 `Saypick-Setup-x.y.z.exe` 安装包运行即可（按用户安装，无需管理员权限；也提供便携版 `Saypick-windows-x.y.z.zip`）。如果 SmartScreen 提示无法识别的应用，点**更多信息 → 仍要运行**。
 
 **3. 首次运行**
 
@@ -163,6 +163,17 @@ cmake --build build             # → build/Saypick.exe
 ```
 
 要求：Windows 10+、Visual Studio 2022+（MSVC、CMake、Ninja）。零第三方依赖——纯 Win32 + WinHTTP + UI Automation。架构与测试体系见 [windows/README.md](windows/README.md)。
+
+**发版** —— 双端共享一个版本号（根目录 `VERSION` 文件），可以以任意先后顺序附着到同一个 GitHub release：
+
+```bash
+./scripts/bump-version.sh            # patch +1，同步 pbxproj / CMake / rc / manifest
+# 提交后，在各自平台上：
+./scripts/release-windows.ps1        # Windows：构建安装包 + zip，创建/补传 release
+./scripts/release-macos.sh           # macOS：构建公证 DMG，创建/补传 release
+```
+
+哪个平台先发就由它创建 `vX.Y.Z` tag，另一个平台稍后把自己的产物传到同一个 release 上。需要先 `gh auth login` 一次。
 
 ## 🔧 常见问题
 

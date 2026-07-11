@@ -89,7 +89,7 @@ brew install --cask everettjf/saypick/saypick
 ```
 …or download the latest `.dmg` from [Releases](../../releases), drag it to Applications, and launch it. The build is signed and notarized by Apple.
 
-Windows — download the latest `Saypick-windows.zip` from [Releases](../../releases), unzip, and run `Saypick.exe` (or build it yourself in a minute, see below). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
+Windows — download and run the latest `Saypick-Setup-x.y.z.exe` installer from [Releases](../../releases) (per-user, no admin needed; a portable `Saypick-windows-x.y.z.zip` is also available). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
 
 **3. First run**
 
@@ -163,6 +163,17 @@ cmake --build build             # → build/Saypick.exe
 ```
 
 Requirements: Windows 10+, Visual Studio 2022+ (MSVC, CMake, Ninja). No third-party dependencies — pure Win32 + WinHTTP + UI Automation. See [windows/README.md](windows/README.md) for architecture and the test harness.
+
+**Releasing** — both platforms share one version (root `VERSION` file) and attach to the same GitHub release tag, in either order:
+
+```bash
+./scripts/bump-version.sh            # patch +1, syncs pbxproj / CMake / rc / manifest
+# commit, then on each platform:
+./scripts/release-windows.ps1        # Windows: builds installer + zip, creates/updates release
+./scripts/release-macos.sh           # macOS: builds notarized DMG, creates/updates release
+```
+
+Whichever platform releases first creates the `vX.Y.Z` tag; the other uploads its asset to the same release later. Requires `gh auth login` once.
 
 ## 🔧 Troubleshooting
 
