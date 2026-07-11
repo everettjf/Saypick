@@ -1,5 +1,6 @@
 #include "App.h"
 #include "Hooks.h"
+#include "OllamaModels.h"
 #include "PopupWindow.h"
 #include "SelectionIcon.h"
 #include "SelectionMonitor.h"
@@ -67,6 +68,11 @@ bool App::init(HINSTANCE inst) {
     }
 
     updatechecker::CheckIfDue(hwnd_, WM_APP_UPDATE);
+
+    // 配置的 Ollama 模型未安装时自动挑一个已装的（避免开箱即败，
+    // 对应 macOS 的 OllamaModelResolver.ensureValidDefault）
+    std::thread([] { ollamamodels::EnsureValidDefault(); }).detach();
+
     return true;
 }
 

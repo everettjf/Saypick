@@ -55,7 +55,8 @@ dependencies (tiny JSON parser included in `src/Json.h`).
 - `src/App.*` — orchestrator (TriggerController equivalent), owns the message-only window that receives hotkeys and worker notifications.
 - `src/SelectionCapture.*` — UI Automation TextPattern selection + synthetic Ctrl+C clipboard fallback (clipboard always restored); also returns the selection's screen rect for popup anchoring.
 - `src/TextReplacer.*` — synthetic Ctrl+V paste (undo-safe), clipboard restored after.
-- `src/Translator.*` — provider interface; Ollama NDJSON + OpenAI SSE streaming over WinHTTP; in-memory LRU cache.
+- `src/Translator.*` — provider interface; Ollama NDJSON + OpenAI SSE streaming over WinHTTP; in-memory LRU cache. Ollama requests send `"think": false` (retry without on 400) — thinking models (qwen3 family) otherwise stall for minutes on hidden reasoning.
+- `src/OllamaModels.*` — `/api/tags` model list (settings dropdown) + auto-replace an uninstalled configured model at startup.
 - `src/Language.*` — 10 languages, prompts, detection (script ranges + Latin stopword scoring).
 - `src/PopupWindow.*` — streaming translation popup (Copy / Replace, Esc / click-outside dismiss).
 - `src/SelectionIcon.*` / `src/SelectionMonitor.*` — floating icon & auto-translate triggers (WH_MOUSE_LL).

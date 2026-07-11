@@ -1,6 +1,7 @@
 #include "SelfTest.h"
 #include "Json.h"
 #include "Language.h"
+#include "OllamaModels.h"
 #include "Settings.h"
 #include "Translator.h"
 #include "Util.h"
@@ -109,6 +110,28 @@ void testPrompts() {
     check(plain.find("你好") != std::string::npos, "plain contains text");
 }
 
+void testOllamaModels() {
+    printf("[ollama models] (live)\n");
+    Settings::shared().load();
+    if (Settings::shared().backend != TranslationBackend::Ollama) {
+        printf("  skip (backend is not ollama)\n");
+        return;
+    }
+    std::wstring err;
+    auto models = ollamamodels::ListInstalled(&err);
+    check(!models.empty(), "list installed models", util::Narrow(err));
+    for (auto& m : models) printf("  installed: %s\n", util::Narrow(m).c_str());
+
+    // 自动纠正：配置成不存在的模型 → 应替换成第一个已装模型（并落盘，
+    // 后面的 live translate 直接用纠正后的模型）
+    Settings& s = Settings::shared();
+    s.ollamaModel = "definitely-not-installed:0b";
+    bool changed = ollamamodels::EnsureValidDefault();
+    check(changed && s.ollamaModel != "definitely-not-installed:0b",
+          "auto-resolve missing model", s.ollamaModel);
+    printf("  resolved to: %s\n", s.ollamaModel.c_str());
+}
+
 void testLiveTranslate() {
     printf("[live translate] (backend from settings.json)\n");
     Settings::shared().load();
@@ -133,7 +156,10 @@ int RunSelfTests(bool includeLiveTranslate) {
     testDetect();
     testSettings();
     testPrompts();
-    if (includeLiveTranslate) testLiveTranslate();
+    if (includeLiveTranslate) {
+        testOllamaModels();
+        testLiveTranslate();
+    }
     printf(g_failures ? "\n%d FAILURE(S)\n" : "\nall tests passed\n", g_failures);
     return g_failures;
 }

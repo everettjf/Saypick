@@ -142,16 +142,22 @@ StreamOutcome runOllama(const TranslationRequest& req, uint64_t id, const DeltaF
     StreamOutcome out;
     const Settings& s = Settings::shared();
 
-    json::Object options;
-    options["temperature"] = 0.3;
-    options["top_p"] = 0.9;
-    options["top_k"] = 40;
+    auto makeBody = [&](bool disableThink) {
+        json::Object options;
+        options["temperature"] = 0.3;
+        options["top_p"] = 0.9;
+        options["top_k"] = 40;
 
-    json::Object body;
-    body["model"] = s.ollamaModel;
-    body["prompt"] = PlainPrompt(req.text, req.target, req.source, req.style);
-    body["stream"] = true;
-    body["options"] = json::Value(std::move(options));
+        json::Object body;
+        body["model"] = s.ollamaModel;
+        body["prompt"] = PlainPrompt(req.text, req.target, req.source, req.style);
+        body["stream"] = true;
+        // 思考型模型（qwen3 系等）默认会先生成大段隐藏推理，翻译一句要几分钟；
+        // 必须显式关闭。不支持该字段的模型会 400，调用方去掉后重试。
+        if (disableThink) body["think"] = false;
+        body["options"] = json::Value(std::move(options));
+        return json::Value(std::move(body)).dump();
+    };
 
     std::wstring url = util::Widen(s.ollamaHost) + L":" + std::to_wstring(s.ollamaPort) + L"/api/generate";
 
@@ -170,7 +176,14 @@ StreamOutcome runOllama(const TranslationRequest& req, uint64_t id, const DeltaF
         });
     };
 
-    http::Result r = http::PostStream(url, json::Value(std::move(body)).dump(), L"", onChunk, cancel);
+    http::Result r = http::PostStream(url, makeBody(true), L"", onChunk, cancel);
+    if (r.status == 400 && !cancel.load()) {
+        // 模型不支持 think 字段 → 去掉重试
+        util::Log("ollama: think rejected (400), retrying without");
+        lines = LineAssembler();
+        out.full.clear();
+        r = http::PostStream(url, makeBody(false), L"", onChunk, cancel);
+    }
     if (!r.ok) {
         out.error = r.status == 0 && !cancel.load()
                         ? L"Can't reach Ollama — is `ollama serve` running?"

@@ -1,17 +1,21 @@
 #include "SettingsWindow.h"
 #include "App.h"
 #include "LaunchAtLogin.h"
+#include "OllamaModels.h"
 #include "Settings.h"
 #include "UpdateChecker.h"
 #include "Util.h"
 #include <commctrl.h>
 #include <shellapi.h>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
 
 constexpr wchar_t kClassName[] = L"SaypickSettings";
+// 工作线程取回 Ollama 模型列表：lParam = std::vector<std::wstring>*（接收方释放）
+constexpr UINT kMsgOllamaModels = WM_APP + 100;
 
 enum CtrlId : int {
     kTab = 1000,
@@ -19,7 +23,7 @@ enum CtrlId : int {
     kEnable, kLogin, kVersionLabel, kCheckUpdate,
     // Backend
     kBackendOllama, kBackendOpenAI,
-    kOllamaModelLabel, kOllamaModel, kOllamaHint,
+    kOllamaModelLabel, kOllamaModel, kOllamaRefresh, kOllamaHint,
     kOaiUrlLabel, kOaiUrl, kOaiKeyLabel, kOaiKey, kOaiModelLabel, kOaiModel,
     // Language
     kNativeLabel, kNative, kForeignLabel, kForeign,
@@ -151,9 +155,19 @@ void updateBackendEnabled() {
     const Settings& s = Settings::shared();
     bool ollama = s.backend == TranslationBackend::Ollama;
     EnableWindow(ctrl(kOllamaModel), ollama);
+    EnableWindow(ctrl(kOllamaRefresh), ollama);
     EnableWindow(ctrl(kOaiUrl), !ollama);
     EnableWindow(ctrl(kOaiKey), !ollama);
     EnableWindow(ctrl(kOaiModel), !ollama);
+}
+
+/// 后台拉取已装模型列表，回主线程填充下拉框
+void fetchOllamaModelsAsync() {
+    HWND hwnd = g.hwnd;
+    std::thread([hwnd] {
+        auto* models = new std::vector<std::wstring>(ollamamodels::ListInstalled(nullptr));
+        if (!PostMessageW(hwnd, kMsgOllamaModels, 0, (LPARAM)models)) delete models;
+    }).detach();
 }
 
 void updateLangWarn() {
@@ -187,7 +201,9 @@ void buildPages() {
         make(L"BUTTON", L"Local (Ollama) — private, offline", WS_TABSTOP | WS_GROUP | BS_AUTORADIOBUTTON,
              x, y, w, 22, kBackendOllama),
         makeLabel(L"Model:", x + 20, y + 30, 60, kOllamaModelLabel),
-        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 85, y + 28, 220, 24, kOllamaModel),
+        // 可编辑下拉框：列出已装模型，也允许手输
+        make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWN | WS_VSCROLL, x + 85, y + 28, 220, 240, kOllamaModel),
+        make(L"BUTTON", L"Refresh", WS_TABSTOP | BS_PUSHBUTTON, x + 315, y + 27, 70, 26, kOllamaRefresh),
         makeLabel(L"Ollama at http://127.0.0.1:11434 — run `ollama serve` and pull a model first.",
                   x + 20, y + 58, w - 20, kOllamaHint),
         make(L"BUTTON", L"OpenAI-compatible — any /chat/completions endpoint", WS_TABSTOP | BS_AUTORADIOBUTTON,
@@ -326,8 +342,22 @@ void onCommand(int id, int code) {
         updateBackendEnabled();
         break;
     case kOllamaModel:
-        if (code != EN_CHANGE) return;
-        s.ollamaModel = util::Narrow(editText(ctrl(kOllamaModel)));
+        if (code == CBN_SELCHANGE) {
+            int sel = (int)SendMessageW(ctrl(kOllamaModel), CB_GETCURSEL, 0, 0);
+            if (sel < 0) return;
+            int len = (int)SendMessageW(ctrl(kOllamaModel), CB_GETLBTEXTLEN, sel, 0);
+            std::wstring m(len, 0);
+            SendMessageW(ctrl(kOllamaModel), CB_GETLBTEXT, sel, (LPARAM)m.data());
+            s.ollamaModel = util::Narrow(m);
+        } else if (code == CBN_EDITCHANGE) {
+            s.ollamaModel = util::Narrow(editText(ctrl(kOllamaModel)));
+        } else {
+            return;
+        }
+        break;
+    case kOllamaRefresh:
+        fetchOllamaModelsAsync();
+        save = false;
         break;
     case kOaiUrl:
         if (code != EN_CHANGE) return;
@@ -433,6 +463,20 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_COMMAND:
         onCommand(LOWORD(wp), HIWORD(wp));
         return 0;
+    case kMsgOllamaModels: {
+        auto* models = (std::vector<std::wstring>*)lp;
+        HWND combo = ctrl(kOllamaModel);
+        if (combo) {
+            // 保留当前文本，只刷新可选项
+            std::wstring current = editText(combo);
+            SendMessageW(combo, CB_RESETCONTENT, 0, 0);
+            for (auto& m : *models)
+                SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)m.c_str());
+            SetWindowTextW(combo, current.c_str());
+        }
+        delete models;
+        return 0;
+    }
     case WM_NOTIFY: {
         auto* hdr = (NMHDR*)lp;
         if (hdr->idFrom == kTab && hdr->code == TCN_SELCHANGE) {
@@ -533,6 +577,9 @@ void open(HWND appWindow) {
     buildPages();
     showPage(0);
     g.loading = false;
+
+    // 异步填充 Ollama 模型下拉框
+    fetchOllamaModelsAsync();
 
     SetForegroundWindow(g.hwnd);
 }

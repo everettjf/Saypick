@@ -2,7 +2,8 @@
 # 前置同 test-e2e.ps1（mock 8199 + SAYPICK_DATA_DIR 测试配置）。
 param(
     [string]$Exe = "$PSScriptRoot\..\build\Saypick.exe",
-    [string]$Expected = "MOCK_TRANSLATION_OK"
+    [string]$Expected = "MOCK_TRANSLATION_OK",
+    [switch]$Real   # 真实模型：不比对固定译文，轮询等待并做宽松断言
 )
 $ErrorActionPreference = "Stop"
 
@@ -66,16 +67,33 @@ Start-Sleep -Milliseconds 500
 
 Write-Output "[wpf] Alt+D → popup (UIA TextPattern path)"
 Send-Combo @($VK_MENU) 0x44
-Start-Sleep -Seconds 3
 
-$popup = [Win]::FindWindowW("SaypickPopup", $NUL)
+$popup = [IntPtr]::Zero
+for ($i = 0; $i -lt 60 -and $popup -eq [IntPtr]::Zero; $i++) {
+    Start-Sleep -Milliseconds 500
+    $popup = [Win]::FindWindowW("SaypickPopup", $NUL)
+}
 Check ($popup -ne [IntPtr]::Zero) "popup exists"
 if ($popup -ne [IntPtr]::Zero) {
-    $sb = New-Object System.Text.StringBuilder 8192
-    [Win]::SendMessageW($popup, 0x000D, [IntPtr]8192, $sb) | Out-Null
-    $text = $sb.ToString()
+    function Read-Popup([IntPtr]$h) {
+        $sb = New-Object System.Text.StringBuilder 8192
+        [Win]::SendMessageW($h, 0x000D, [IntPtr]8192, $sb) | Out-Null
+        return $sb.ToString()
+    }
+    # 等流式输出稳定
+    $text = ""; $prev = $null
+    for ($i = 0; $i -lt 120; $i++) {
+        Start-Sleep -Milliseconds 500
+        $text = Read-Popup $popup
+        if ($text -and $text -eq $prev) { break }
+        $prev = $text
+    }
     Write-Output "  popup text: '$text'"
-    Check ($text -eq $Expected) "popup translation" "got '$text'"
+    if ($Real) {
+        Check ($text.Trim().Length -gt 0 -and $text -match "[A-Za-z]") "popup translation (real model)" "got '$text'"
+    } else {
+        Check ($text -eq $Expected) "popup translation" "got '$text'"
+    }
 
     # 锚点合理性：弹窗应与宿主窗口所在区域相邻（同屏且距离不夸张）
     $pr = New-Object Win+RECT; [Win]::GetWindowRect($popup, [ref]$pr) | Out-Null
@@ -93,11 +111,21 @@ Write-Output "[wpf] Alt+R → rewrite (selection persists in WPF)"
 Ensure-Foreground $hostHwnd | Out-Null
 Start-Sleep -Milliseconds 300
 Send-Combo @($VK_MENU) 0x52
-Start-Sleep -Seconds 3
 
-$content = if (Test-Path $sync) { [System.IO.File]::ReadAllText($sync, [System.Text.Encoding]::UTF8) } else { "<no sync file>" }
+$content = ""
+for ($i = 0; $i -lt 120; $i++) {
+    Start-Sleep -Milliseconds 500
+    $content = if (Test-Path $sync) { [System.IO.File]::ReadAllText($sync, [System.Text.Encoding]::UTF8) } else { "" }
+    if ($content -and $content -ne "你好世界，今天天气很好。") { break }
+}
+Start-Sleep -Milliseconds 500
 Write-Output "  wpf text now: '$content'"
-Check ($content.Trim() -eq $Expected) "rewrite replaced text" "got '$content'"
+if ($Real) {
+    Check ($content.Trim().Length -gt 0 -and $content -ne "你好世界，今天天气很好。" -and $content -match "[A-Za-z]") `
+        "rewrite replaced with English text" "got '$content'"
+} else {
+    Check ($content.Trim() -eq $Expected) "rewrite replaced text" "got '$content'"
+}
 
 Write-Output "[wpf] cleanup"
 Stop-Process -Id $hostProc.Id -Force -ErrorAction SilentlyContinue

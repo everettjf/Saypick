@@ -15,6 +15,7 @@ add_executable(Saypick WIN32
     src/Keyboard.cpp
     src/Http.cpp
     src/Translator.cpp
+    src/OllamaModels.cpp
     src/SelectionCapture.cpp
     src/TextReplacer.cpp
     src/Hooks.cpp

@@ -13,6 +13,7 @@ for selection capture, a tiny built-in JSON parser. No Electron, no runtime.
 | Selection capture | AX API → clipboard fallback | UI Automation TextPattern → clipboard fallback |
 | Undo-safe replace | synthetic ⌘V | synthetic Ctrl+V |
 | Backends | Ollama · OpenAI-compatible (streaming) | same |
+| Ollama model picker / auto-resolve | ✅ | ✅ (dropdown from /api/tags; invalid model auto-replaced at startup) |
 | Floating icon / auto-translate on select | ✅ | ✅ (low-level mouse hook) |
 | Retarget language in popup | ✅ | ✅ |
 | Styles (Faithful/Formal/Casual/Polished) | ✅ | ✅ |
@@ -73,6 +74,7 @@ App                  orchestrator: hotkeys, flows, thread marshaling (WM_APP_*)
 SelectionCapture     UIA TextPattern selection (+ rect) → synthetic Ctrl+C fallback
 TextReplacer         clipboard paste replace (undo-safe), clipboard restored
 Translator           prompts · Ollama NDJSON · OpenAI SSE · LRU cache (worker threads)
+OllamaModels         /api/tags model list · auto-resolve invalid default model
 Http                 WinHTTP streaming POST / GET
 PopupWindow          no-activate topmost popup: streaming text, Copy/Replace,
                      retarget menu, Esc / click-outside dismiss, dark mode, DPI
@@ -84,6 +86,10 @@ TrayIcon / Hotkeys / LaunchAtLogin / UpdateChecker / Settings / Json / Language
 
 Threading rule: all UI on the main thread; translation streams on worker
 threads and posts `WM_APP_*` messages with heap payloads (receiver frees).
+
+Thinking models (qwen3 family etc.) are handled: the Ollama request sends
+`"think": false` (and retries without it for models that reject the field) —
+otherwise a 2-second translation silently burns minutes on hidden reasoning.
 
 ## Known limitations
 

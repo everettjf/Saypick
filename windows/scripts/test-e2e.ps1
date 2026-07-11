@@ -3,7 +3,8 @@
 # openai/8199 配置的测试目录（Alt+D 读、Alt+R 写、rewritePreview=false）。
 param(
     [string]$Exe = "$PSScriptRoot\..\build\Saypick.exe",
-    [string]$Expected = "MOCK_TRANSLATION_OK"
+    [string]$Expected = "MOCK_TRANSLATION_OK",
+    [switch]$Real   # 真实模型：不比对固定译文，轮询等待并做宽松断言
 )
 $ErrorActionPreference = "Stop"
 
@@ -88,14 +89,31 @@ Start-Sleep -Milliseconds 300
 
 Write-Output "[e2e] Alt+D → popup"
 Send-Combo @($VK_MENU) 0x44      # Alt+D
-Start-Sleep -Seconds 3
 
-$popup = [Win]::FindWindowW("SaypickPopup", $NUL)
+# 轮询等弹窗出现（真实模型冷启动可能较慢）
+$popup = [IntPtr]::Zero
+for ($i = 0; $i -lt 60 -and $popup -eq [IntPtr]::Zero; $i++) {
+    Start-Sleep -Milliseconds 500
+    $popup = [Win]::FindWindowW("SaypickPopup", $NUL)
+}
 Check ($popup -ne [IntPtr]::Zero) "popup window exists"
 if ($popup -ne [IntPtr]::Zero) {
-    $text = Get-WindowText $popup
+    # 等译文流式输出完成（连续两次读取相同且非空视为稳定）
+    $text = ""; $prev = $null
+    for ($i = 0; $i -lt 120; $i++) {
+        Start-Sleep -Milliseconds 500
+        $text = Get-WindowText $popup
+        if ($text -and $text -eq $prev) { break }
+        $prev = $text
+    }
     Write-Output "  popup text: '$text'"
-    Check ($text -eq $Expected) "popup translation" "got '$text'"
+    if ($Real) {
+        Check ($text.Trim().Length -gt 0) "popup translation non-empty"
+        Check ($text -ne "你好世界，今天天气很好。") "popup translation differs from source"
+        Check ($text -match "[A-Za-z]") "popup translation looks English" "got '$text'"
+    } else {
+        Check ($text -eq $Expected) "popup translation" "got '$text'"
+    }
 }
 
 Write-Output "[e2e] Esc closes popup"
@@ -109,11 +127,22 @@ Start-Sleep -Milliseconds 300
 [Win]::SendMessageInt($editHwnd, 0x00B1, [IntPtr]::Zero, [IntPtr](-1)) | Out-Null   # EM_SETSEL 全选
 Start-Sleep -Milliseconds 300
 Send-Combo @($VK_MENU) 0x52      # Alt+R
-Start-Sleep -Seconds 3
 
-$content = Get-WindowText $editHwnd
+# 轮询等内容被替换
+$content = ""
+for ($i = 0; $i -lt 120; $i++) {
+    Start-Sleep -Milliseconds 500
+    $content = Get-WindowText $editHwnd
+    if ($content -and $content -ne "你好世界，今天天气很好。") { break }
+}
+Start-Sleep -Milliseconds 500   # 等剪贴板还原完成
 Write-Output "  edit now: '$content'"
-Check ($content.Trim() -eq $Expected) "rewrite replaced text" "got '$content'"
+if ($Real) {
+    Check ($content.Trim().Length -gt 0 -and $content -ne "你好世界，今天天气很好。" -and $content -match "[A-Za-z]") `
+        "rewrite replaced with English text" "got '$content'"
+} else {
+    Check ($content.Trim() -eq $Expected) "rewrite replaced text" "got '$content'"
+}
 
 # 剪贴板应已还原为替换前内容
 $clip = Get-Clipboard -Raw
