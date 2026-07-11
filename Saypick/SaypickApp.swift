@@ -52,6 +52,20 @@ enum SettingsOpener {
             // 兜底：MenuBarExtra 场景尚未就绪时尝试旧的 AppKit 入口
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         }
+        // accessory App 打开的设置窗口可能落在别的 App 后面（#3）：
+        // 等场景装配一拍后显式置前。
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            NSApp.activate(ignoringOtherApps: true)
+            settingsWindow()?.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    /// SwiftUI Settings 场景的窗口（identifier 以 com_apple_SwiftUI_Settings 开头）。
+    private static func settingsWindow() -> NSWindow? {
+        NSApp.windows.first {
+            $0.identifier?.rawValue.hasPrefix("com_apple_SwiftUI_Settings") == true
+        }
     }
 }
 

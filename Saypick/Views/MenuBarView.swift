@@ -30,7 +30,11 @@ struct MenuBarView: View {
 
         Divider()
 
-        SettingsLink {
+        // 不用 SettingsLink：accessory App 的菜单栏场景里它可能不激活 App，
+        // 设置窗口开在其他 App 后面或根本不出现（#3）。
+        Button {
+            SettingsOpener.open()
+        } label: {
             Label("Settings…", systemImage: "gearshape")
         }
         .keyboardShortcut(",", modifiers: .command)
