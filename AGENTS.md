@@ -66,7 +66,9 @@ dependencies (tiny JSON parser included in `src/Json.h`).
 
 ### Conventions & gotchas
 
-- All UI on the main thread; translation streams on worker threads and posts `WM_APP_*` messages with heap-allocated payloads (receiver frees).
+- All UI on the main thread, and the main thread NEVER sleeps (a stalled message loop gets WH_*_LL hooks silently removed). Waiting work (clipboard-fallback capture, paste replace, HTTP) lives on worker threads posting `WM_APP_*` messages with heap payloads (receiver frees).
+- Workers must not read `Settings::shared()` — snapshot config on the main thread and pass it in (see `BackendConfig` in Translator.cpp, `FetchInstalledAsync`).
+- Paste replace uses clipboard delayed rendering (WM_RENDERFORMAT = "target consumed the paste"); settings saves are atomic (tmp+rename); crashes dump minidumps to `%APPDATA%\Saypick\crashes`.
 - `RegisterHotKey` fails if another app owns the combo — surface it, don't crash.
 - Keep feature parity with macOS where it makes sense; follow Windows conventions where they differ (tray vs menu bar, Alt vs ⌥, registry Run key vs SMAppService).
 

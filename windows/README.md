@@ -84,8 +84,22 @@ SettingsWindow       tabbed native settings (instant apply)
 TrayIcon / Hotkeys / LaunchAtLogin / UpdateChecker / Settings / Json / Language
 ```
 
-Threading rule: all UI on the main thread; translation streams on worker
-threads and posts `WM_APP_*` messages with heap payloads (receiver frees).
+Threading rule: all UI on the main thread, and the main thread **never
+sleeps** — a stalled message loop gets the low-level hooks silently removed
+by the OS. Anything that waits (clipboard-fallback capture, paste
+replacement, HTTP) runs on worker threads and posts `WM_APP_*` messages with
+heap payloads (receiver frees). Workers never read `Settings::shared()`
+directly; config is snapshotted on the main thread and passed in.
+
+Reliability notes:
+- Paste replacement uses clipboard delayed rendering (`WM_RENDERFORMAT`) to
+  know when the target actually consumed the paste before restoring the
+  original clipboard.
+- `settings.json` writes are atomic (temp file + rename).
+- Unhandled exceptions write a minidump to `%APPDATA%\Saypick\crashes\`
+  (the 5 most recent are kept) — attach one when reporting a crash.
+- The tray icon re-registers itself after an explorer.exe restart.
+- Selections over 5000 characters are rejected with a friendly message.
 
 Thinking models (qwen3 family etc.) are handled: the Ollama request sends
 `"think": false` (and retries without it for models that reject the field) —
