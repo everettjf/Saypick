@@ -20,9 +20,11 @@ jobs:
       - name: Self-test
         shell: pwsh
         run: |
+          # GUI 子系统 exe：& 调用不等待、$LASTEXITCODE 不更新，必须 Start-Process -Wait
           $env:SAYPICK_DATA_DIR = "$env:RUNNER_TEMP\saypick-ci"
-          & windows\build\Release\Saypick.exe --selftest
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $p = Start-Process -FilePath windows\build\Release\Saypick.exe `
+              -ArgumentList '--selftest' -NoNewWindow -Wait -PassThru
+          exit $p.ExitCode
 
   macos:
     name: macOS build check
