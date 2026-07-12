@@ -131,8 +131,46 @@ bool elementRect(IUIAutomationElement* el, RECT* out) {
     return false;
 }
 
-/// 模拟 Ctrl+C 复制兜底；用后还原剪贴板
-std::optional<std::wstring> copyViaClipboard() {
+} // namespace
+
+RECT CursorAnchor() {
+    POINT p{};
+    GetCursorPos(&p);
+    return RECT{p.x, p.y - 4, p.x + 1, p.y + 14};
+}
+
+std::optional<Capture> UIASelectionOnly() {
+    ComPtr<IUIAutomationElement> el = focusedElement();
+    if (!el) return std::nullopt;
+    return uiaSelection(el.Get());
+}
+
+std::optional<Capture> UIAReadSelection() {
+    ComPtr<IUIAutomationElement> el = focusedElement();
+    util::Log("UIAReadSelection focused=%d", el ? 1 : 0);
+    if (!el) return std::nullopt;
+    auto cap = uiaSelection(el.Get());
+    util::Log("UIAReadSelection uia=%d", cap.has_value());
+    return cap;
+}
+
+std::optional<Capture> UIACaptureForRewrite() {
+    ComPtr<IUIAutomationElement> el = focusedElement();
+    if (!el) return std::nullopt;
+    // 有选区 → 只改选区
+    if (auto cap = uiaSelection(el.Get())) return cap;
+    // 无选区 → 改整个输入框
+    if (auto value = uiaWholeValue(el.Get())) {
+        Capture cap;
+        cap.text = *value;
+        cap.isWholeField = true;
+        cap.hasAnchor = elementRect(el.Get(), &cap.anchor);
+        return cap;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::wstring> ClipboardFallbackCopy() {
     clipboard::Snapshot saved = clipboard::Take();
     DWORD before = clipboard::SequenceNumber();
 
@@ -149,68 +187,11 @@ std::optional<std::wstring> copyViaClipboard() {
             break;
         }
     }
-    util::Log("copyViaClipboard seqChanged=%d waited=%dms got_len=%d",
+    util::Log("ClipboardFallbackCopy seqChanged=%d waited=%dms got_len=%d",
               clipboard::SequenceNumber() != before, waited, result ? (int)result->size() : -1);
     clipboard::Restore(saved);
     if (result && util::Trim(*result).empty()) result.reset();
     return result;
-}
-
-} // namespace
-
-RECT CursorAnchor() {
-    POINT p{};
-    GetCursorPos(&p);
-    return RECT{p.x, p.y - 4, p.x + 1, p.y + 14};
-}
-
-std::optional<Capture> UIASelectionOnly() {
-    ComPtr<IUIAutomationElement> el = focusedElement();
-    if (!el) return std::nullopt;
-    return uiaSelection(el.Get());
-}
-
-std::optional<Capture> ReadSelection() {
-    ComPtr<IUIAutomationElement> el = focusedElement();
-    util::Log("ReadSelection focused=%d", el ? 1 : 0);
-    if (el) {
-        auto cap = uiaSelection(el.Get());
-        util::Log("ReadSelection uia=%d", cap.has_value());
-        if (cap) return cap;
-    }
-    if (auto copied = copyViaClipboard()) {
-        Capture cap;
-        cap.text = *copied;
-        cap.anchor = CursorAnchor();
-        cap.hasAnchor = true;
-        return cap;
-    }
-    return std::nullopt;
-}
-
-std::optional<Capture> CaptureForRewrite() {
-    ComPtr<IUIAutomationElement> el = focusedElement();
-    if (el) {
-        // 有选区 → 只改选区
-        if (auto cap = uiaSelection(el.Get())) return cap;
-        // 无选区 → 改整个输入框
-        if (auto value = uiaWholeValue(el.Get())) {
-            Capture cap;
-            cap.text = *value;
-            cap.isWholeField = true;
-            cap.hasAnchor = elementRect(el.Get(), &cap.anchor);
-            return cap;
-        }
-    }
-    // UIA 拿不到 → 兜底复制（按选区处理）
-    if (auto copied = copyViaClipboard()) {
-        Capture cap;
-        cap.text = *copied;
-        cap.anchor = CursorAnchor();
-        cap.hasAnchor = true;
-        return cap;
-    }
-    return std::nullopt;
 }
 
 } // namespace capture

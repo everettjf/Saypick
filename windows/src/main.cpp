@@ -4,6 +4,7 @@
 //
 #include <windows.h>
 #include "App.h"
+#include "CrashDump.h"
 #include "SelfTest.h"
 #include <objbase.h>
 #include <shellapi.h>
@@ -31,6 +32,7 @@ int runSelfTest(bool live) {
 int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR cmdLine, int) {
     std::wstring args = cmdLine ? cmdLine : L"";
 
+    crashdump::Install();
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
     if (args.find(L"--selftest") != std::wstring::npos)

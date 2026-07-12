@@ -17,6 +17,9 @@ constexpr UINT WM_APP_TR_DONE = WM_APP + 3;     // wParam=reqId, lParam=DoneMsg*
 constexpr UINT WM_APP_REWRITE_DONE = WM_APP + 4;// lParam=RewriteResult*
 constexpr UINT WM_APP_UPDATE = WM_APP + 5;      // 有新版本
 constexpr UINT WM_APP_OPEN_SETTINGS = WM_APP + 6;
+constexpr UINT WM_APP_MODELS = WM_APP + 7;          // lParam=std::vector<std::wstring>*（接收方释放）
+constexpr UINT WM_APP_READ_CAPTURED = WM_APP + 8;   // lParam=capture::Capture*（可空；接收方释放）
+constexpr UINT WM_APP_REWRITE_CAPTURED = WM_APP + 9;// 同上
 
 constexpr wchar_t kAppWindowClass[] = L"SaypickApp";
 
@@ -58,6 +61,9 @@ private:
     void handleRead();
     void handleRewrite();
     void presentRead(const capture::Capture& cap);
+    void proceedRewrite(const capture::Capture& cap);
+    /// 超长输入直接弹错误提示（LLM 又慢又贵，弹窗也放不下）；返回 true = 已拦截
+    bool rejectIfTooLong(const capture::Capture& cap);
     Direction resolveDirection(const std::wstring& text, TranslationDirection mode, bool isWrite) const;
     void startStream(const std::wstring& text, std::optional<Language> from, Language to, RewriteStyle style);
     void setupSelectionTrigger();
@@ -73,4 +79,5 @@ private:
     RewriteStyle currentStyle_ = RewriteStyle::Faithful;
     bool currentReplaceSelectAll_ = false;    // 弹窗 Replace 时是否先全选
     bool hotkeyWarningShown_ = false;
+    UINT taskbarCreatedMsg_ = 0;   // explorer 重启后重挂托盘图标
 };

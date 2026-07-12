@@ -138,6 +138,13 @@ void Settings::save() const {
     root["hasCompletedFirstLaunch"] = hasCompletedFirstLaunch;
     root["lastUpdateCheck"] = (double)lastUpdateCheck;
 
-    std::ofstream f(filePath(), std::ios::binary | std::ios::trunc);
-    if (f) f << json::Value(std::move(root)).dump();
+    // 原子写：先写临时文件再 rename 替换，进程中途被杀也不会留下半截 JSON
+    std::wstring path = filePath();
+    std::wstring tmp = path + L".tmp";
+    {
+        std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
+        if (!f) return;
+        f << json::Value(std::move(root)).dump();
+    }
+    MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
 }

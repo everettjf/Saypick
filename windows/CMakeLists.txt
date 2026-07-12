@@ -16,6 +16,7 @@ add_executable(Saypick WIN32
     src/Http.cpp
     src/Translator.cpp
     src/OllamaModels.cpp
+    src/CrashDump.cpp
     src/SelectionCapture.cpp
     src/TextReplacer.cpp
     src/Hooks.cpp
@@ -42,5 +43,5 @@ endif()
 
 target_link_libraries(Saypick PRIVATE
     user32 gdi32 shell32 ole32 oleaut32 uuid comctl32
-    winhttp uiautomationcore dwmapi advapi32 shlwapi uxtheme
+    winhttp uiautomationcore dwmapi advapi32 shlwapi uxtheme dbghelp
 )

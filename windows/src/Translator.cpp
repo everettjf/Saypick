@@ -114,6 +114,26 @@ private:
     bool bomChecked_ = false;
 };
 
+// ---------- 后端配置快照 ----------
+// 工作线程绝不直接读 Settings::shared()（主线程同时改设置会数据竞争），
+// 发起请求时在调用线程拍快照带走。
+
+struct BackendConfig {
+    TranslationBackend backend;
+    std::string ollamaHost;
+    int ollamaPort;
+    std::string ollamaModel;
+    std::string openAIBaseURL;
+    std::string openAIKey;
+    std::string openAIModel;
+
+    static BackendConfig snapshot() {
+        const Settings& s = Settings::shared();
+        return {s.backend, s.ollamaHost, s.ollamaPort, s.ollamaModel,
+                s.openAIBaseURL, s.openAIKey, s.openAIModel};
+    }
+};
+
 // ---------- 活跃请求管理 ----------
 
 struct ActiveRequest {
@@ -137,10 +157,9 @@ struct StreamOutcome {
     std::wstring full;
 };
 
-StreamOutcome runOllama(const TranslationRequest& req, uint64_t id, const DeltaFn& onDelta,
-                        const std::atomic<bool>& cancel) {
+StreamOutcome runOllama(const TranslationRequest& req, const BackendConfig& s, uint64_t id,
+                        const DeltaFn& onDelta, const std::atomic<bool>& cancel) {
     StreamOutcome out;
-    const Settings& s = Settings::shared();
 
     auto makeBody = [&](bool disableThink) {
         json::Object options;
@@ -194,10 +213,9 @@ StreamOutcome runOllama(const TranslationRequest& req, uint64_t id, const DeltaF
     return out;
 }
 
-StreamOutcome runOpenAI(const TranslationRequest& req, uint64_t id, const DeltaFn& onDelta,
-                        const std::atomic<bool>& cancel) {
+StreamOutcome runOpenAI(const TranslationRequest& req, const BackendConfig& s, uint64_t id,
+                        const DeltaFn& onDelta, const std::atomic<bool>& cancel) {
     StreamOutcome out;
-    const Settings& s = Settings::shared();
 
     if (s.openAIKey.empty()) {
         out.error = L"Missing OpenAI API key";
@@ -254,10 +272,6 @@ StreamOutcome runOpenAI(const TranslationRequest& req, uint64_t id, const DeltaF
     return out;
 }
 
-const char* backendId() {
-    return Settings::shared().backend == TranslationBackend::OpenAI ? "openai" : "ollama";
-}
-
 } // namespace
 
 std::string SystemPrompt(Language target, std::optional<Language> source, RewriteStyle style) {
@@ -289,8 +303,11 @@ std::string PlainPrompt(const std::wstring& text, Language target, std::optional
 uint64_t Stream(const TranslationRequest& req, DeltaFn onDelta, DoneFn onDone) {
     uint64_t id = g_nextId.fetch_add(1);
 
+    // 配置快照在调用线程（主线程）拍好带进工作线程
+    BackendConfig cfg = BackendConfig::snapshot();
+
     // 缓存命中：同步回调全文
-    std::string key = cacheKey(req, backendId());
+    std::string key = cacheKey(req, cfg.backend == TranslationBackend::OpenAI ? "openai" : "ollama");
     if (auto cached = Cache::shared().get(key)) {
         onDelta(id, *cached);
         onDone(id, true, L"");
@@ -303,10 +320,10 @@ uint64_t Stream(const TranslationRequest& req, DeltaFn onDelta, DoneFn onDone) {
         g_active[id] = {cancel};
     }
 
-    std::thread([req, id, key, cancel, onDelta = std::move(onDelta), onDone = std::move(onDone)] {
-        StreamOutcome out = Settings::shared().backend == TranslationBackend::OpenAI
-                                ? runOpenAI(req, id, onDelta, *cancel)
-                                : runOllama(req, id, onDelta, *cancel);
+    std::thread([req, cfg, id, key, cancel, onDelta = std::move(onDelta), onDone = std::move(onDone)] {
+        StreamOutcome out = cfg.backend == TranslationBackend::OpenAI
+                                ? runOpenAI(req, cfg, id, onDelta, *cancel)
+                                : runOllama(req, cfg, id, onDelta, *cancel);
         bool cancelled = cancel->load();
         finishRequest(id);
         if (cancelled) return;  // 取消的请求不再回调
@@ -326,6 +343,11 @@ void Cancel(uint64_t reqId) {
     std::lock_guard lock(g_mu);
     auto it = g_active.find(reqId);
     if (it != g_active.end()) it->second.cancel->store(true);
+}
+
+void CancelAll() {
+    std::lock_guard lock(g_mu);
+    for (auto& [id, req] : g_active) req.cancel->store(true);
 }
 
 std::optional<std::wstring> TranslateFully(const TranslationRequest& req, std::wstring* error) {

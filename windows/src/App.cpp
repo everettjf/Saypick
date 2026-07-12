@@ -17,6 +17,8 @@
 namespace {
 constexpr int kReadHotkeyId = 1;
 constexpr int kRewriteHotkeyId = 2;
+// 超过这个长度不翻译：LLM 又慢又贵，弹窗也展示不下
+constexpr size_t kMaxInputChars = 5000;
 } // namespace
 
 App& App::shared() {
@@ -56,6 +58,8 @@ bool App::init(HINSTANCE inst) {
     tray_.onOpenReleases = [] { updatechecker::OpenReleasesPage(); };
     tray_.onQuit = [this] { quit(); };
     tray_.add(hwnd_, WM_APP_TRAY);
+    // explorer.exe 重启后托盘图标会消失，收到 TaskbarCreated 时重挂
+    taskbarCreatedMsg_ = RegisterWindowMessageW(L"TaskbarCreated");
 
     applyEnabledState();
 
@@ -69,9 +73,9 @@ bool App::init(HINSTANCE inst) {
 
     updatechecker::CheckIfDue(hwnd_, WM_APP_UPDATE);
 
-    // 配置的 Ollama 模型未安装时自动挑一个已装的（避免开箱即败，
-    // 对应 macOS 的 OllamaModelResolver.ensureValidDefault）
-    std::thread([] { ollamamodels::EnsureValidDefault(); }).detach();
+    // 配置的 Ollama 模型未安装时自动挑一个已装的（避免开箱即败）。
+    // 网络在工作线程，Settings 的读写回到主线程（WM_APP_MODELS）。
+    ollamamodels::FetchInstalledAsync(hwnd_, WM_APP_MODELS);
 
     return true;
 }
@@ -126,8 +130,11 @@ void App::quit() {
     PopupWindow::shared().close();
     SelectionIcon::shared().hide();
     SelectionMonitor::shared().stop();
+    translator::CancelAll();
     tray_.remove();
-    PostQuitMessage(0);
+    // 直接结束进程：分离的工作线程（流式翻译/替换）不再有机会
+    // 在静态对象析构后继续跑（那是退出崩溃的经典来源）。
+    ExitProcess(0);
 }
 
 // ---------- 方向决策（与 macOS resolveDirection 一致）----------
@@ -195,14 +202,39 @@ void App::handleRead() {
     const Settings& s = Settings::shared();
     util::Log("handleRead enabled=%d", s.enabled);
     if (!s.enabled || foregroundAppSkipped()) return;
-    auto cap = capture::ReadSelection();
-    util::Log("handleRead capture=%d text_len=%d hasAnchor=%d",
-              cap.has_value(), cap ? (int)cap->text.size() : -1, cap ? cap->hasAnchor : 0);
-    if (!cap) return;
-    presentRead(*cap);
+
+    // UIA 快路径在主线程（无睡眠）；拿不到再去工作线程走剪贴板兜底
+    // （兜底要等最多 400ms，主线程睡了低级钩子会被系统摘掉）
+    if (auto cap = capture::UIAReadSelection()) {
+        presentRead(*cap);
+        return;
+    }
+    HWND hwnd = hwnd_;
+    std::thread([hwnd] {
+        auto copied = capture::ClipboardFallbackCopy();
+        capture::Capture* cap = nullptr;
+        if (copied) {
+            cap = new capture::Capture;
+            cap->text = *copied;
+            cap->anchor = capture::CursorAnchor();
+            cap->hasAnchor = true;
+        }
+        if (!PostMessageW(hwnd, WM_APP_READ_CAPTURED, 0, (LPARAM)cap)) delete cap;
+    }).detach();
+}
+
+bool App::rejectIfTooLong(const capture::Capture& cap) {
+    if (cap.text.size() <= kMaxInputChars) return false;
+    RECT anchor = cap.hasAnchor ? cap.anchor : capture::CursorAnchor();
+    wchar_t msg[128];
+    swprintf_s(msg, L"Selection is too long (%zu characters, max %zu)",
+               cap.text.size(), kMaxInputChars);
+    showErrorPopup(cap.text.substr(0, 80), Settings::shared().nativeLanguage, anchor, msg);
+    return true;
 }
 
 void App::presentRead(const capture::Capture& cap) {
+    if (rejectIfTooLong(cap)) return;
     const Settings& s = Settings::shared();
     RECT anchor = cap.hasAnchor ? cap.anchor : capture::CursorAnchor();
     Direction dir = resolveDirection(cap.text, s.readDirection, false);
@@ -219,7 +251,7 @@ void App::presentRead(const capture::Capture& cap) {
         if (util::Trim(t).empty()) return;
         bool selectAll = currentReplaceSelectAll_;
         PopupWindow::shared().close();
-        replacer::Replace(t, selectAll);
+        replacer::ReplaceAsync(std::move(t), selectAll);
     };
     popup.onRetarget = [this](Language newTarget) {
         translator::Cancel(currentReq_);
@@ -250,8 +282,30 @@ void App::startStream(const std::wstring& text, std::optional<Language> from, La
 void App::handleRewrite() {
     const Settings& s = Settings::shared();
     if (!s.enabled || foregroundAppSkipped()) return;
-    auto cap = capture::CaptureForRewrite();
-    if (!cap) return;
+
+    // 与 handleRead 同理：UIA 主线程快路径，剪贴板兜底进工作线程
+    if (auto cap = capture::UIACaptureForRewrite()) {
+        proceedRewrite(*cap);
+        return;
+    }
+    HWND hwnd = hwnd_;
+    std::thread([hwnd] {
+        auto copied = capture::ClipboardFallbackCopy();
+        capture::Capture* cap = nullptr;
+        if (copied) {
+            cap = new capture::Capture;
+            cap->text = *copied;
+            cap->anchor = capture::CursorAnchor();
+            cap->hasAnchor = true;
+        }
+        if (!PostMessageW(hwnd, WM_APP_REWRITE_CAPTURED, 0, (LPARAM)cap)) delete cap;
+    }).detach();
+}
+
+void App::proceedRewrite(const capture::Capture& capIn) {
+    if (rejectIfTooLong(capIn)) return;
+    const Settings& s = Settings::shared();
+    const capture::Capture* cap = &capIn;
 
     Direction dir = resolveDirection(cap->text, s.rewriteDirection, true);
 
@@ -270,7 +324,7 @@ void App::handleRewrite() {
             if (util::Trim(t).empty()) return;
             bool selectAll = currentReplaceSelectAll_;
             PopupWindow::shared().close();
-            replacer::Replace(t, selectAll);
+            replacer::ReplaceAsync(std::move(t), selectAll);
         };
         popup.onRetarget = [this](Language newTarget) {
             translator::Cancel(currentReq_);
@@ -356,7 +410,7 @@ LRESULT App::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_APP_REWRITE_DONE: {
         auto* r = (RewriteResult*)lp;
         if (r->ok)
-            replacer::Replace(r->text, r->isWholeField);
+            replacer::ReplaceAsync(std::move(r->text), r->isWholeField);
         else
             showErrorPopup(r->original, r->target, r->anchor, r->error);
         delete r;
@@ -371,8 +425,41 @@ LRESULT App::handle(UINT msg, WPARAM wp, LPARAM lp) {
         openSettings();
         return 0;
 
+    case WM_APP_MODELS: {
+        // 工作线程拉回的已装模型列表；Settings 的比对与保存在主线程做
+        auto* models = (std::vector<std::wstring>*)lp;
+        ollamamodels::ApplyResolvedModels(*models);
+        delete models;
+        return 0;
+    }
+
+    case WM_APP_READ_CAPTURED: {
+        auto* cap = (capture::Capture*)lp;
+        if (cap) {
+            presentRead(*cap);
+            delete cap;
+        }
+        return 0;
+    }
+
+    case WM_APP_REWRITE_CAPTURED: {
+        auto* cap = (capture::Capture*)lp;
+        if (cap) {
+            proceedRewrite(*cap);
+            delete cap;
+        }
+        return 0;
+    }
+
     case WM_DESTROY:
         tray_.remove();
+        return 0;
+    }
+
+    // explorer 重启 → 托盘图标丢失，重挂
+    if (taskbarCreatedMsg_ && msg == taskbarCreatedMsg_) {
+        tray_.remove();
+        tray_.add(hwnd_, WM_APP_TRAY);
         return 0;
     }
     return DefWindowProcW(hwnd_, msg, wp, lp);

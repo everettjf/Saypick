@@ -34,6 +34,9 @@ uint64_t Stream(const TranslationRequest& req, DeltaFn onDelta, DoneFn onDone);
 /// 取消某个请求（对应流式任务尽快退出，不再回调）
 void Cancel(uint64_t reqId);
 
+/// 取消全部活跃请求（退出前调用）
+void CancelAll();
+
 /// 阻塞式完整翻译（改写直接替换用）。失败返回 nullopt 并填 error。
 std::optional<std::wstring> TranslateFully(const TranslationRequest& req, std::wstring* error);
 

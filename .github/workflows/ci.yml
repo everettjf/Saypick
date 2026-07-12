@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  windows:
+    name: Windows build + self-test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -A x64
+        working-directory: windows
+      - name: Build
+        run: cmake --build build --config Release
+        working-directory: windows
+      - name: Self-test
+        shell: pwsh
+        run: |
+          $env:SAYPICK_DATA_DIR = "$env:RUNNER_TEMP\saypick-ci"
+          & windows\build\Release\Saypick.exe --selftest
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  macos:
+    name: macOS build check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (unsigned)
+        run: |
+          xcodebuild -project Saypick.xcodeproj -scheme Saypick \
+            -configuration Debug -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY= build
+        working-directory: macos

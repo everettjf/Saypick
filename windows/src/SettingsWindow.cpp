@@ -161,13 +161,9 @@ void updateBackendEnabled() {
     EnableWindow(ctrl(kOaiModel), !ollama);
 }
 
-/// 后台拉取已装模型列表，回主线程填充下拉框
+/// 后台拉取已装模型列表，回主线程填充下拉框（Settings 快照在主线程拍好）
 void fetchOllamaModelsAsync() {
-    HWND hwnd = g.hwnd;
-    std::thread([hwnd] {
-        auto* models = new std::vector<std::wstring>(ollamamodels::ListInstalled(nullptr));
-        if (!PostMessageW(hwnd, kMsgOllamaModels, 0, (LPARAM)models)) delete models;
-    }).detach();
+    ollamamodels::FetchInstalledAsync(g.hwnd, kMsgOllamaModels);
 }
 
 void updateLangWarn() {

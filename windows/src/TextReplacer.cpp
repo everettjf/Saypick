@@ -1,13 +1,86 @@
 #include "TextReplacer.h"
 #include "Clipboard.h"
 #include "Keyboard.h"
+#include "Util.h"
+#include <thread>
 
 namespace replacer {
 
-void Replace(const std::wstring& text, bool selectAll) {
+namespace {
+
+constexpr wchar_t kOwnerClass[] = L"SaypickClipboardOwner";
+
+struct RenderContext {
+    const std::wstring* text = nullptr;
+    bool rendered = false;
+};
+
+void serveText(const std::wstring& text) {
+    size_t bytes = (text.size() + 1) * sizeof(wchar_t);
+    HGLOBAL h = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    if (!h) return;
+    if (void* p = GlobalLock(h)) {
+        memcpy(p, text.c_str(), bytes);
+        GlobalUnlock(h);
+        if (!SetClipboardData(CF_UNICODETEXT, h)) GlobalFree(h);
+    } else {
+        GlobalFree(h);
+    }
+}
+
+LRESULT CALLBACK ownerProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    auto* ctx = (RenderContext*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+    switch (msg) {
+    case WM_RENDERFORMAT:
+        // 目标应用 GetClipboardData → 粘贴真正发生了
+        if (ctx && ctx->text && wp == CF_UNICODETEXT) {
+            serveText(*ctx->text);
+            ctx->rendered = true;
+        }
+        return 0;
+    case WM_RENDERALLFORMATS:
+        if (ctx && ctx->text && OpenClipboard(hwnd)) {
+            if (GetClipboardOwner() == hwnd) serveText(*ctx->text);
+            CloseClipboard();
+            ctx->rendered = true;
+        }
+        return 0;
+    }
+    return DefWindowProcW(hwnd, msg, wp, lp);
+}
+
+/// 工作线程主体：设置延迟渲染剪贴板 → 合成粘贴 → 等目标取数据 → 还原剪贴板
+void replaceWorker(const std::wstring& text, bool selectAll) {
     clipboard::Snapshot saved = clipboard::Take();
 
-    clipboard::SetText(text);
+    static bool registered = [] {
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = ownerProc;
+        wc.hInstance = GetModuleHandleW(nullptr);
+        wc.lpszClassName = kOwnerClass;
+        RegisterClassW(&wc);
+        return true;
+    }();
+    (void)registered;
+
+    RenderContext ctx;
+    ctx.text = &text;
+    HWND owner = CreateWindowExW(0, kOwnerClass, L"", 0, 0, 0, 0, 0,
+                                 HWND_MESSAGE, nullptr, GetModuleHandleW(nullptr), nullptr);
+    bool delayed = false;
+    if (owner) {
+        SetWindowLongPtrW(owner, GWLP_USERDATA, (LONG_PTR)&ctx);
+        if (OpenClipboard(owner)) {
+            EmptyClipboard();
+            SetClipboardData(CF_UNICODETEXT, nullptr);  // 延迟渲染
+            CloseClipboard();
+            delayed = true;
+        }
+    }
+    if (!delayed) {
+        // 兜底：老式直接写 + 固定延迟
+        clipboard::SetText(text);
+    }
 
     if (selectAll) {
         keyboard::SendSelectAll();
@@ -15,9 +88,39 @@ void Replace(const std::wstring& text, bool selectAll) {
     }
     keyboard::SendPaste();
 
-    // 等粘贴完成再还原剪贴板，避免还原把待粘贴内容覆盖掉
-    Sleep(150);
+    if (delayed) {
+        // 泵消息等 WM_RENDERFORMAT；2s 没人取说明粘贴没发生（目标不收粘贴等）
+        DWORD deadline = GetTickCount() + 2000;
+        MSG m;
+        while (!ctx.rendered) {
+            DWORD now = GetTickCount();
+            if (now >= deadline) break;
+            MsgWaitForMultipleObjects(0, nullptr, FALSE, deadline - now, QS_ALLINPUT);
+            while (PeekMessageW(&m, nullptr, 0, 0, PM_REMOVE)) {
+                TranslateMessage(&m);
+                DispatchMessageW(&m);
+            }
+        }
+        util::Log("replace rendered=%d", ctx.rendered);
+        // 渲染后小宽限：有些目标会紧接着再读一次
+        if (ctx.rendered) Sleep(150);
+    } else {
+        Sleep(150);
+    }
+
     clipboard::Restore(saved);
+    if (owner) {
+        SetWindowLongPtrW(owner, GWLP_USERDATA, 0);
+        DestroyWindow(owner);
+    }
+}
+
+} // namespace
+
+void ReplaceAsync(std::wstring text, bool selectAll) {
+    std::thread([text = std::move(text), selectAll] {
+        replaceWorker(text, selectAll);
+    }).detach();
 }
 
 } // namespace replacer

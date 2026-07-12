@@ -177,6 +177,16 @@ void PopupWindow::layoutAndResize() {
     ReleaseDC(hwnd_, dc);
     int textH = rc.bottom > px(20) ? rc.bottom : px(20);
 
+    // 高度钳制：正文最多占所在显示器工作区的 60%，超出部分画省略号
+    // （Copy 复制的仍是完整译文）
+    {
+        HMONITOR monClamp = MonitorFromRect(&anchor_, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO miClamp{sizeof(miClamp)};
+        GetMonitorInfoW(monClamp, &miClamp);
+        int maxTextH = (miClamp.rcWork.bottom - miClamp.rcWork.top) * 6 / 10;
+        if (textH > maxTextH) textH = maxTextH;
+    }
+
     bool hasButtons = !translation_.empty() && error_.empty();
     const int btnH = px(26);
     const int btnGap = px(10);
@@ -290,7 +300,9 @@ void PopupWindow::paint(HDC dc) {
         DrawTextW(dc, L"Translating…", -1, &rcText, DT_WORDBREAK);
     } else {
         SetTextColor(dc, th.text);
-        DrawTextW(dc, translation_.c_str(), -1, &rcText, DT_WORDBREAK | DT_NOPREFIX);
+        // 超出钳制高度时在末行加省略号
+        DrawTextW(dc, translation_.c_str(), -1, &rcText,
+                  DT_WORDBREAK | DT_NOPREFIX | DT_END_ELLIPSIS | DT_EDITCONTROL);
     }
 
     // ---- 按钮 ----
