@@ -6,7 +6,9 @@
 namespace {
 constexpr wchar_t kClassName[] = L"SaypickSelectionIcon";
 constexpr UINT_PTR kAutoHideTimer = 1;
-constexpr COLORREF kAccent = RGB(0x7C, 0x5C, 0xFF);
+constexpr BYTE kAccentRed = 0x7C;
+constexpr BYTE kAccentGreen = 0x5C;
+constexpr BYTE kAccentBlue = 0xFF;
 } // namespace
 
 SelectionIcon& SelectionIcon::shared() {
@@ -107,9 +109,12 @@ LRESULT SelectionIcon::handle(UINT msg, WPARAM wp, LPARAM lp) {
         RECT rc{};
         GetClientRect(hwnd_, &rc);
         int boost = hover_ ? 18 : 0;
-        HBRUSH bg = CreateSolidBrush(RGB(std::min(255, GetRValue(kAccent) + boost),
-                                         std::min(255, GetGValue(kAccent) + boost),
-                                         std::min(255, GetBValue(kAccent) + boost)));
+        auto brighten = [boost](BYTE channel) {
+            return static_cast<BYTE>(std::min(255, static_cast<int>(channel) + boost));
+        };
+        HBRUSH bg = CreateSolidBrush(RGB(brighten(kAccentRed),
+                                         brighten(kAccentGreen),
+                                         brighten(kAccentBlue)));
         FillRect(dc, &rc, bg);
         DeleteObject(bg);
         SetBkMode(dc, TRANSPARENT);
