@@ -23,7 +23,7 @@ $ErrorActionPreference = "Stop"
 & (Join-Path $root "windows\scripts\build-release.ps1")
 
 $setup = Join-Path $root "windows\build\Saypick-Setup-$version.exe"
-$zip = Join-Path $root "windows\build\Saypick-windows-$version.zip"
+$zip = Join-Path $root "windows\build\Saypick-Windows-$version.zip"
 
 # release 不存在则创建
 $ErrorActionPreference = "Continue"

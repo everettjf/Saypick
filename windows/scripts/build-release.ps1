@@ -3,7 +3,7 @@
 # 产物：
 #   windows/build/Saypick.exe
 #   windows/build/Saypick-Setup-{v}.exe     （安装包）
-#   windows/build/Saypick-windows-{v}.zip   （便携版）
+#   windows/build/Saypick-Windows-{v}.zip   （便携版）
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
@@ -47,7 +47,7 @@ if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
 $setup = Join-Path $win "build\Saypick-Setup-$version.exe"
 
 # --- 便携 zip ---
-$zip = Join-Path $win "build\Saypick-windows-$version.zip"
+$zip = Join-Path $win "build\Saypick-Windows-$version.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path $exe -DestinationPath $zip
 

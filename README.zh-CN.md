@@ -89,7 +89,7 @@ brew install --cask everettjf/saypick/saypick
 ```
 ……或者从 [Releases](../../releases) 下载最新 `.dmg`，拖进「应用程序」后启动。安装包已由 Apple 签名和公证。
 
-Windows——从 [Releases](../../releases) 下载最新的 `Saypick-Setup-x.y.z.exe` 安装包运行即可（按用户安装，无需管理员权限；也提供便携版 `Saypick-windows-x.y.z.zip`）。如果 SmartScreen 提示无法识别的应用，点**更多信息 → 仍要运行**。
+Windows——从 [Releases](../../releases) 下载最新的 `Saypick-Setup-x.y.z.exe` 安装包运行即可（按用户安装，无需管理员权限；也提供便携版 `Saypick-Windows-x.y.z.zip`）。如果 SmartScreen 提示无法识别的应用，点**更多信息 → 仍要运行**。
 
 **3. 首次运行**
 

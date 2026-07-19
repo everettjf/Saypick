@@ -91,7 +91,7 @@ brew install --cask everettjf/saypick/saypick
 ```
 …or download the latest `.dmg` from [Releases](../../releases), drag it to Applications, and launch it. The build is signed and notarized by Apple.
 
-Windows — download and run the latest `Saypick-Setup-x.y.z.exe` installer from [Releases](../../releases) (per-user, no admin needed; a portable `Saypick-windows-x.y.z.zip` is also available). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
+Windows — download and run the latest `Saypick-Setup-x.y.z.exe` installer from [Releases](../../releases) (per-user, no admin needed; a portable `Saypick-Windows-x.y.z.zip` is also available). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
 
 **3. First run**
 
