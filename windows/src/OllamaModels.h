@@ -20,6 +20,9 @@ std::vector<std::wstring> ListInstalled(const std::string& host, int port, std::
 /// message（lParam = new std::vector<std::wstring>*，接收方释放）。
 void FetchInstalledAsync(HWND notify, UINT message);
 
+/// 异步发送空 generate 请求预加载当前模型，并保持在内存中 10 分钟。
+void PreloadAsync();
+
 /// 主线程调用：给定已装模型列表，配置的模型未安装时改成第一个已装的并保存。
 /// 返回 true 表示发生了替换。
 bool ApplyResolvedModels(const std::vector<std::wstring>& installed);

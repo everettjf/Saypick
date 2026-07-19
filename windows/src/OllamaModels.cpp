@@ -43,6 +43,28 @@ void FetchInstalledAsync(HWND notify, UINT message) {
     }).detach();
 }
 
+void PreloadAsync() {
+    const Settings& s = Settings::shared();
+    if (s.backend != TranslationBackend::Ollama || s.ollamaModel.empty()) return;
+    const std::string host = s.ollamaHost;
+    const int port = s.ollamaPort;
+    const std::string model = s.ollamaModel;
+
+    std::thread([host, port, model] {
+        json::Object body;
+        body["model"] = model;
+        body["prompt"] = "";
+        body["stream"] = false;
+        body["keep_alive"] = "10m";
+        body["think"] = false;
+        std::atomic<bool> cancel{false};
+        const std::wstring url = util::Widen(host) + L":" + std::to_wstring(port) + L"/api/generate";
+        http::Result r = http::PostStream(url, json::Value(std::move(body)).dump(), L"",
+                                          [](const char*, size_t) {}, cancel);
+        if (!r.ok) util::Log("ollama preload failed: %s", r.error.c_str());
+    }).detach();
+}
+
 bool ApplyResolvedModels(const std::vector<std::wstring>& installed) {
     Settings& s = Settings::shared();
     if (s.backend != TranslationBackend::Ollama || installed.empty()) return false;

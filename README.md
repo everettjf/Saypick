@@ -74,10 +74,12 @@ Detection and translation cover the 10 most-spoken languages: **English, Chinese
 Local (private, offline) — install [Ollama](https://ollama.com/download), then:
 ```bash
 # macOS: brew install ollama · Windows: winget install Ollama.Ollama
-ollama pull qwen2.5:3b   # or any chat model you like
+ollama pull qwen3.5:4b   # or any compact chat model that fits your hardware
 ollama serve             # usually already running as a service
 ```
-…or cloud: in **Settings → Backend**, choose *OpenAI-compatible* and enter your base URL, API key, and model.
+…or cloud: in **Settings → Backend**, choose *Cloud API*. Windows includes presets for
+OpenAI, OpenRouter, and DeepSeek plus a custom OpenAI-compatible endpoint; API keys are
+kept in Windows Credential Manager rather than the settings JSON.
 
 Saypick lists your installed models in **Settings → Backend** and auto-picks an installed one if the configured model is missing — pulling *any* chat model is enough to get going.
 
@@ -179,7 +181,7 @@ Whichever platform releases first creates the `vX.Y.Z` tag; the other uploads it
 
 - **Shortcut does nothing** → macOS: confirm Accessibility is granted (Settings → General shows *Granted*) and Saypick is enabled in the menu bar. Windows: another app may own the hotkey — pick a different one in Settings → Shortcuts.
 - **No translation** → Ollama: is `ollama serve` running and the model installed? (Saypick auto-picks an installed model if your configured one is missing.) OpenAI: check base URL / key / model.
-- **Translation is very slow on a qwen3-class model** → Saypick already disables hidden “thinking” for Ollama models; if it still crawls, the model may simply be too big for your hardware — try a smaller one from the dropdown in **Settings → Backend**.
+- **Translation is very slow on a qwen3-class model** → Saypick disables hidden “thinking”, preloads the selected model, and keeps it warm for 10 minutes. If it still crawls, the model may be too big for your hardware — try a smaller one from **Settings → Backend**.
 - **Misaligned popup in some apps** → those apps don’t expose text bounds; the popup falls back to the cursor position.
 - **“Can’t be opened on this Mac” on Sequoia or earlier** → Saypick requires **macOS 26+**. It’s built against the current SwiftUI menu-bar and Settings APIs, and keeping a single modern baseline is what lets a small project stay reliable. Support for older macOS isn’t planned right now.
 - **Which language goes where?** → In **Settings → Language**, pick your **native** and **foreign** language (there is no “source/target” pair to get backwards). Each shortcut has its own direction; **auto** detects the selected text and translates the other way.

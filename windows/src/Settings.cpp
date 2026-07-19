@@ -1,4 +1,5 @@
 #include "Settings.h"
+#include "Credentials.h"
 #include "Json.h"
 #include "Util.h"
 #include <fstream>
@@ -62,7 +63,20 @@ void Settings::load() {
     ollamaModel = str("ollamaModel", ollamaModel);
 
     openAIBaseURL = str("openAIBaseURL", openAIBaseURL);
-    openAIKey = str("openAIKey", openAIKey);
+    const std::string legacyKey = str("openAIKey", "");
+    wchar_t testDir[2]{};
+    const bool isolatedTest = GetEnvironmentVariableW(L"SAYPICK_DATA_DIR", testDir, 2) != 0;
+    bool migratedLegacyKey = false;
+    if (isolatedTest) {
+        openAIKey = legacyKey;
+    } else {
+        openAIKey = credentials::LoadCloudApiKey();
+        if (openAIKey.empty() && !legacyKey.empty()) {
+            openAIKey = legacyKey;
+            credentials::SaveCloudApiKey(openAIKey); // migrate old plaintext settings
+            migratedLegacyKey = true;
+        }
+    }
     openAIModel = str("openAIModel", openAIModel);
 
     if (auto l = lang::FromCode(str("nativeLanguage", ""))) nativeLanguage = *l;
@@ -95,6 +109,7 @@ void Settings::load() {
 
     hasCompletedFirstLaunch = boolean("hasCompletedFirstLaunch", false);
     lastUpdateCheck = (long long)root["lastUpdateCheck"].asNumber(0);
+    if (migratedLegacyKey) save(); // rewrite JSON without the plaintext key
 }
 
 void Settings::save() const {
@@ -107,7 +122,10 @@ void Settings::save() const {
     root["ollamaModel"] = ollamaModel;
 
     root["openAIBaseURL"] = openAIBaseURL;
-    root["openAIKey"] = openAIKey;
+    wchar_t testDir[2]{};
+    const bool isolatedTest = GetEnvironmentVariableW(L"SAYPICK_DATA_DIR", testDir, 2) != 0;
+    if (isolatedTest) root["openAIKey"] = openAIKey;
+    else credentials::SaveCloudApiKey(openAIKey);
     root["openAIModel"] = openAIModel;
 
     root["nativeLanguage"] = lang::Code(nativeLanguage);

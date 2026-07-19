@@ -429,6 +429,7 @@ LRESULT App::handle(UINT msg, WPARAM wp, LPARAM lp) {
         // 工作线程拉回的已装模型列表；Settings 的比对与保存在主线程做
         auto* models = (std::vector<std::wstring>*)lp;
         ollamamodels::ApplyResolvedModels(*models);
+        ollamamodels::PreloadAsync();
         delete models;
         return 0;
     }

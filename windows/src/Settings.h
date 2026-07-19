@@ -38,7 +38,7 @@ struct Settings {
     // OpenAI 兼容
     std::string openAIBaseURL = "https://api.openai.com/v1";
     std::string openAIKey;
-    std::string openAIModel = "gpt-4o-mini";
+    std::string openAIModel = "gpt-5-mini";
 
     // 语言（native = 母语，foreign = 外语）
     Language nativeLanguage = Language::Chinese;

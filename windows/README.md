@@ -28,6 +28,12 @@ Settings persist to `%APPDATA%\Saypick\settings.json`
 (override dir with the `SAYPICK_DATA_DIR` env var; set `SAYPICK_DEBUG=1` to
 write `debug.log` beside it).
 
+Cloud API presets are available for OpenAI, OpenRouter, and DeepSeek, alongside
+any custom OpenAI-compatible `/chat/completions` endpoint. In normal use the API
+key is stored in Windows Credential Manager; it is never written back to
+`settings.json`. Ollama models are preloaded at startup and kept warm for 10
+minutes to avoid cold-start delays.
+
 ## Build
 
 Requirements: Windows 10+, Visual Studio 2022+ (MSVC toolset, CMake, Ninja —
@@ -74,7 +80,7 @@ App                  orchestrator: hotkeys, flows, thread marshaling (WM_APP_*)
 SelectionCapture     UIA TextPattern selection (+ rect) → synthetic Ctrl+C fallback
 TextReplacer         clipboard paste replace (undo-safe), clipboard restored
 Translator           prompts · Ollama NDJSON · OpenAI SSE · LRU cache (worker threads)
-OllamaModels         /api/tags model list · auto-resolve invalid default model
+OllamaModels         /api/tags model list · auto-resolve · async preload/keep-alive
 Http                 WinHTTP streaming POST / GET
 PopupWindow          no-activate topmost popup: streaming text, Copy/Replace,
                      retarget menu, Esc / click-outside dismiss, dark mode, DPI

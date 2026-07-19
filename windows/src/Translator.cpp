@@ -171,6 +171,7 @@ StreamOutcome runOllama(const TranslationRequest& req, const BackendConfig& s, u
         body["model"] = s.ollamaModel;
         body["prompt"] = PlainPrompt(req.text, req.target, req.source, req.style);
         body["stream"] = true;
+        body["keep_alive"] = "10m";
         // 思考型模型（qwen3 系等）默认会先生成大段隐藏推理，翻译一句要几分钟；
         // 必须显式关闭。不支持该字段的模型会 400，调用方去掉后重试。
         if (disableThink) body["think"] = false;
@@ -217,13 +218,28 @@ StreamOutcome runOpenAI(const TranslationRequest& req, const BackendConfig& s, u
                         const DeltaFn& onDelta, const std::atomic<bool>& cancel) {
     StreamOutcome out;
 
-    if (s.openAIKey.empty()) {
-        out.error = L"Missing OpenAI API key";
-        return out;
-    }
-
     std::string base = s.openAIBaseURL;
     while (!base.empty() && base.back() == '/') base.pop_back();
+    if (base.empty()) {
+        out.error = L"Missing cloud API base URL";
+        return out;
+    }
+    if (s.openAIModel.empty()) {
+        out.error = L"Missing cloud model name";
+        return out;
+    }
+    const bool localEndpoint = base.rfind("http://127.0.0.1", 0) == 0 ||
+                               base.rfind("http://localhost", 0) == 0 ||
+                               base.rfind("http://[::1]", 0) == 0;
+    const bool secureEndpoint = base.rfind("https://", 0) == 0;
+    if (s.openAIKey.empty() && !localEndpoint) {
+        out.error = L"Missing cloud API key";
+        return out;
+    }
+    if (!s.openAIKey.empty() && !secureEndpoint && !localEndpoint) {
+        out.error = L"Refusing to send an API key over an insecure HTTP connection";
+        return out;
+    }
 
     json::Array messages;
     {
@@ -239,10 +255,15 @@ StreamOutcome runOpenAI(const TranslationRequest& req, const BackendConfig& s, u
     json::Object body;
     body["model"] = s.openAIModel;
     body["stream"] = true;
-    body["temperature"] = 0.3;
     body["messages"] = json::Value(std::move(messages));
 
-    std::wstring headers = L"Authorization: Bearer " + util::Widen(s.openAIKey) + L"\r\n";
+    std::wstring headers;
+    if (!s.openAIKey.empty())
+        headers += L"Authorization: Bearer " + util::Widen(s.openAIKey) + L"\r\n";
+    if (base.find("openrouter.ai") != std::string::npos) {
+        headers += L"HTTP-Referer: https://everettjf.github.io/Saypick/\r\n";
+        headers += L"X-OpenRouter-Title: Saypick\r\n";
+    }
 
     LineAssembler lines;
     auto onChunk = [&](const char* data, size_t len) {

@@ -2,6 +2,7 @@
 #include "App.h"
 #include "LaunchAtLogin.h"
 #include "OllamaModels.h"
+#include "resource.h"
 #include "Settings.h"
 #include "UpdateChecker.h"
 #include "Util.h"
@@ -24,7 +25,8 @@ enum CtrlId : int {
     // Backend
     kBackendOllama, kBackendOpenAI,
     kOllamaModelLabel, kOllamaModel, kOllamaRefresh, kOllamaHint,
-    kOaiUrlLabel, kOaiUrl, kOaiKeyLabel, kOaiKey, kOaiModelLabel, kOaiModel,
+    kOaiProviderLabel, kOaiProvider,
+    kOaiUrlLabel, kOaiUrl, kOaiKeyLabel, kOaiKey, kOaiModelLabel, kOaiModel, kOaiHint,
     // Language
     kNativeLabel, kNative, kForeignLabel, kForeign,
     kReadDirLabel, kReadDir, kRewriteDirLabel, kRewriteDir, kLangWarn,
@@ -43,6 +45,7 @@ struct State {
     HWND hwnd = nullptr;
     HWND appWindow = nullptr;
     HFONT font = nullptr, fontBold = nullptr;
+    HIMAGELIST tabImages = nullptr;
     UINT dpi = 96;
     std::vector<std::vector<HWND>> pages;  // 每个 tab 页的控件
     bool loading = false;                  // 初始化填充时不触发保存
@@ -53,6 +56,100 @@ State g;
 int px(int v) { return MulDiv(v, (int)g.dpi, 96); }
 
 HWND ctrl(int id) { return GetDlgItem(g.hwnd, id); }
+
+HIMAGELIST createTabImages() {
+    const int size = px(16);
+    HIMAGELIST images = ImageList_Create(size, size, ILC_COLOR24 | ILC_MASK, 7, 0);
+    HDC dc = CreateCompatibleDC(nullptr);
+    BITMAPINFO info{};
+    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    info.bmiHeader.biWidth = size;
+    info.bmiHeader.biHeight = -size;
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+    DWORD* pixels = nullptr;
+    HBITMAP bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS,
+                                      reinterpret_cast<void**>(&pixels), nullptr, 0);
+    HGDIOBJ oldBitmap = SelectObject(dc, bitmap);
+    HBRUSH maskBrush = CreateSolidBrush(RGB(255, 0, 255));
+    HPEN pen = CreatePen(PS_SOLID, std::max(1, px(1)), GetSysColor(COLOR_WINDOWTEXT));
+    HGDIOBJ oldPen = SelectObject(dc, pen);
+    HGDIOBJ oldBrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+    auto p = [](int value) { return px(value); };
+    for (int icon = 0; icon < 7; ++icon) {
+        RECT rc{0, 0, size, size};
+        FillRect(dc, &rc, maskBrush);
+        switch (icon) {
+        case 0: // General: gear
+            Ellipse(dc, p(4), p(4), p(12), p(12));
+            Ellipse(dc, p(7), p(7), p(9), p(9));
+            MoveToEx(dc, p(8), p(1), nullptr); LineTo(dc, p(8), p(4));
+            MoveToEx(dc, p(8), p(12), nullptr); LineTo(dc, p(8), p(15));
+            MoveToEx(dc, p(1), p(8), nullptr); LineTo(dc, p(4), p(8));
+            MoveToEx(dc, p(12), p(8), nullptr); LineTo(dc, p(15), p(8));
+            break;
+        case 1: // Backend: server stack
+            Rectangle(dc, p(2), p(2), p(14), p(7));
+            Rectangle(dc, p(2), p(9), p(14), p(14));
+            Ellipse(dc, p(4), p(4), p(6), p(6));
+            Ellipse(dc, p(4), p(11), p(6), p(13));
+            break;
+        case 2: // Language: globe
+            Ellipse(dc, p(2), p(2), p(14), p(14));
+            MoveToEx(dc, p(2), p(8), nullptr); LineTo(dc, p(14), p(8));
+            Ellipse(dc, p(5), p(2), p(11), p(14));
+            break;
+        case 3: // Shortcuts: keyboard
+            Rectangle(dc, p(1), p(3), p(15), p(13));
+            for (int x = 4; x <= 12; x += 4) {
+                MoveToEx(dc, p(x), p(5), nullptr); LineTo(dc, p(x + 1), p(5));
+                MoveToEx(dc, p(x), p(8), nullptr); LineTo(dc, p(x + 1), p(8));
+            }
+            MoveToEx(dc, p(4), p(11), nullptr); LineTo(dc, p(12), p(11));
+            break;
+        case 4: // Behavior: sliders
+            MoveToEx(dc, p(2), p(4), nullptr); LineTo(dc, p(14), p(4));
+            MoveToEx(dc, p(2), p(8), nullptr); LineTo(dc, p(14), p(8));
+            MoveToEx(dc, p(2), p(12), nullptr); LineTo(dc, p(14), p(12));
+            Ellipse(dc, p(5), p(2), p(8), p(6));
+            Ellipse(dc, p(10), p(6), p(13), p(10));
+            Ellipse(dc, p(3), p(10), p(6), p(14));
+            break;
+        case 5: // Skip apps: stacked windows
+            Rectangle(dc, p(2), p(4), p(12), p(13));
+            MoveToEx(dc, p(5), p(2), nullptr); LineTo(dc, p(14), p(2));
+            LineTo(dc, p(14), p(11));
+            break;
+        case 6: // About: info
+            Ellipse(dc, p(2), p(2), p(14), p(14));
+            Ellipse(dc, p(7), p(4), p(9), p(6));
+            MoveToEx(dc, p(8), p(7), nullptr); LineTo(dc, p(8), p(12));
+            break;
+        }
+        std::vector<BYTE> andMask(((size + 15) / 16) * 2 * size, 0xFF);
+        std::vector<BYTE> xorMask(andMask.size(), 0x00);
+        const int rowBytes = ((size + 15) / 16) * 2;
+        for (int yy = 0; yy < size; ++yy) {
+            for (int xx = 0; xx < size; ++xx) {
+                if ((pixels[yy * size + xx] & 0x00FFFFFF) != 0x00FF00FF)
+                    andMask[yy * rowBytes + xx / 8] &= static_cast<BYTE>(~(0x80 >> (xx % 8)));
+            }
+        }
+        HICON iconHandle = CreateIcon(GetModuleHandleW(nullptr), size, size, 1, 1,
+                                      andMask.data(), xorMask.data());
+        ImageList_ReplaceIcon(images, -1, iconHandle);
+        DestroyIcon(iconHandle);
+    }
+    SelectObject(dc, oldBrush);
+    SelectObject(dc, oldPen);
+    SelectObject(dc, oldBitmap);
+    DeleteObject(pen);
+    DeleteObject(maskBrush);
+    DeleteObject(bitmap);
+    DeleteDC(dc);
+    return images;
+}
 
 void applyToApp() {
     if (g.appWindow) {
@@ -156,9 +253,39 @@ void updateBackendEnabled() {
     bool ollama = s.backend == TranslationBackend::Ollama;
     EnableWindow(ctrl(kOllamaModel), ollama);
     EnableWindow(ctrl(kOllamaRefresh), ollama);
+    EnableWindow(ctrl(kOaiProvider), !ollama);
     EnableWindow(ctrl(kOaiUrl), !ollama);
     EnableWindow(ctrl(kOaiKey), !ollama);
     EnableWindow(ctrl(kOaiModel), !ollama);
+}
+
+int cloudProviderIndex(const std::string& baseUrl) {
+    if (baseUrl.find("api.openai.com") != std::string::npos) return 0;
+    if (baseUrl.find("openrouter.ai") != std::string::npos) return 1;
+    if (baseUrl.find("api.deepseek.com") != std::string::npos) return 2;
+    return 3;
+}
+
+void applyCloudProviderPreset(int index) {
+    Settings& s = Settings::shared();
+    switch (index) {
+    case 0:
+        s.openAIBaseURL = "https://api.openai.com/v1";
+        s.openAIModel = "gpt-5-mini";
+        break;
+    case 1:
+        s.openAIBaseURL = "https://openrouter.ai/api/v1";
+        s.openAIModel = "openai/gpt-5-mini";
+        break;
+    case 2:
+        s.openAIBaseURL = "https://api.deepseek.com";
+        s.openAIModel = "deepseek-v4-flash";
+        break;
+    default:
+        return;
+    }
+    SetWindowTextW(ctrl(kOaiUrl), util::Widen(s.openAIBaseURL).c_str());
+    SetWindowTextW(ctrl(kOaiModel), util::Widen(s.openAIModel).c_str());
 }
 
 /// 后台拉取已装模型列表，回主线程填充下拉框（Settings 快照在主线程拍好）
@@ -177,7 +304,7 @@ void updateLangWarn() {
 void buildPages() {
     const Settings& s = Settings::shared();
     g.pages.assign(7, {});
-    const int x = 22, w = 500;
+    const int x = 24, w = 620;
     int y;
 
     // --- 0 General ---
@@ -202,20 +329,30 @@ void buildPages() {
         make(L"BUTTON", L"Refresh", WS_TABSTOP | BS_PUSHBUTTON, x + 315, y + 27, 70, 26, kOllamaRefresh),
         makeLabel(L"Ollama at http://127.0.0.1:11434 — run `ollama serve` and pull a model first.",
                   x + 20, y + 58, w - 20, kOllamaHint),
-        make(L"BUTTON", L"OpenAI-compatible — any /chat/completions endpoint", WS_TABSTOP | BS_AUTORADIOBUTTON,
+        make(L"BUTTON", L"Cloud API — OpenAI-compatible streaming", WS_TABSTOP | BS_AUTORADIOBUTTON,
              x, y + 96, w, 22, kBackendOpenAI),
-        makeLabel(L"Base URL:", x + 20, y + 126, 62, kOaiUrlLabel),
-        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 85, y + 124, 330, 24, kOaiUrl),
-        makeLabel(L"API key:", x + 20, y + 156, 62, kOaiKeyLabel),
-        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL | ES_PASSWORD, x + 85, y + 154, 330, 24, kOaiKey),
-        makeLabel(L"Model:", x + 20, y + 186, 62, kOaiModelLabel),
-        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 85, y + 184, 220, 24, kOaiModel),
+        makeLabel(L"Provider:", x + 20, y + 126, 72, kOaiProviderLabel),
+        make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST, x + 100, y + 123, 210, 180, kOaiProvider),
+        makeLabel(L"Base URL:", x + 20, y + 158, 72, kOaiUrlLabel),
+        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 100, y + 155, 390, 24, kOaiUrl),
+        makeLabel(L"API key:", x + 20, y + 190, 72, kOaiKeyLabel),
+        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL | ES_PASSWORD, x + 100, y + 187, 390, 24, kOaiKey),
+        makeLabel(L"Model:", x + 20, y + 222, 72, kOaiModelLabel),
+        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 100, y + 219, 260, 24, kOaiModel),
+        makeLabel(L"API key is stored securely in Windows Credential Manager.",
+                  x + 20, y + 252, w - 20, kOaiHint),
     };
     CheckDlgButton(g.hwnd, s.backend == TranslationBackend::Ollama ? kBackendOllama : kBackendOpenAI, BST_CHECKED);
     SetWindowTextW(ctrl(kOllamaModel), util::Widen(s.ollamaModel).c_str());
     SetWindowTextW(ctrl(kOaiUrl), util::Widen(s.openAIBaseURL).c_str());
     SetWindowTextW(ctrl(kOaiKey), util::Widen(s.openAIKey).c_str());
     SetWindowTextW(ctrl(kOaiModel), util::Widen(s.openAIModel).c_str());
+    {
+        HWND provider = ctrl(kOaiProvider);
+        const wchar_t* providers[] = {L"OpenAI", L"OpenRouter", L"DeepSeek", L"Custom endpoint"};
+        for (auto* name : providers) SendMessageW(provider, CB_ADDSTRING, 0, (LPARAM)name);
+        SendMessageW(provider, CB_SETCURSEL, cloudProviderIndex(s.openAIBaseURL), 0);
+    }
     updateBackendEnabled();
 
     // --- 2 Language ---
@@ -292,7 +429,7 @@ void buildPages() {
     g.pages[6] = {
         makeLabel(L"Saypick " SAYPICK_VERSION_STRING, x, y, 300, kAboutTitle, true),
         makeLabel(L"System-wide AI translation && inline rewrite for Windows.\n"
-                  L"Local (Ollama) or any OpenAI-compatible endpoint.",
+                  L"Private local models or secure OpenAI-compatible cloud APIs.",
                   x, y + 28, w, kAboutDesc),
         make(L"SysLink",
              L"<a href=\"https://github.com/everettjf/Saypick\">GitHub</a>   ·   "
@@ -355,12 +492,16 @@ void onCommand(int id, int code) {
         fetchOllamaModelsAsync();
         save = false;
         break;
+    case kOaiProvider:
+        if (code != CBN_SELCHANGE) return;
+        applyCloudProviderPreset((int)SendMessageW(ctrl(kOaiProvider), CB_GETCURSEL, 0, 0));
+        break;
     case kOaiUrl:
         if (code != EN_CHANGE) return;
         s.openAIBaseURL = util::Narrow(editText(ctrl(kOaiUrl)));
         break;
     case kOaiKey:
-        if (code != EN_CHANGE) return;
+        if (code != EN_KILLFOCUS) return;
         s.openAIKey = util::Narrow(editText(ctrl(kOaiKey)));
         break;
     case kOaiModel:
@@ -461,15 +602,16 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case kMsgOllamaModels: {
         auto* models = (std::vector<std::wstring>*)lp;
+        ollamamodels::ApplyResolvedModels(*models);
         HWND combo = ctrl(kOllamaModel);
         if (combo) {
-            // 保留当前文本，只刷新可选项
-            std::wstring current = editText(combo);
+            std::wstring current = util::Widen(Settings::shared().ollamaModel);
             SendMessageW(combo, CB_RESETCONTENT, 0, 0);
             for (auto& m : *models)
                 SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)m.c_str());
             SetWindowTextW(combo, current.c_str());
         }
+        ollamamodels::PreloadAsync();
         delete models;
         return 0;
     }
@@ -501,6 +643,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_DESTROY:
         if (g.font) { DeleteObject(g.font); g.font = nullptr; }
         if (g.fontBold) { DeleteObject(g.fontBold); g.fontBold = nullptr; }
+        if (g.tabImages) { ImageList_Destroy(g.tabImages); g.tabImages = nullptr; }
         g.hwnd = nullptr;
         g.pages.clear();
         return 0;
@@ -529,6 +672,7 @@ void open(HWND appWindow) {
         wc.hInstance = GetModuleHandleW(nullptr);
         wc.lpszClassName = kClassName;
         wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        wc.hIcon = LoadIconW(wc.hInstance, MAKEINTRESOURCEW(IDI_APPICON));
         wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
         RegisterClassW(&wc);
         return true;
@@ -536,7 +680,7 @@ void open(HWND appWindow) {
     (void)registered;
 
     g.dpi = GetDpiForSystem();
-    int w = px(566), h = px(430);
+    int w = px(680), h = px(500);
     RECT wr{0, 0, w, h};
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME), FALSE);
 
@@ -546,6 +690,12 @@ void open(HWND appWindow) {
                              wr.right - wr.left, wr.bottom - wr.top,
                              nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
     if (!g.hwnd) return;
+
+    HICON smallIcon = (HICON)LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APPICON),
+                                        IMAGE_ICON, px(16), px(16), LR_DEFAULTCOLOR | LR_SHARED);
+    SendMessageW(g.hwnd, WM_SETICON, ICON_BIG,
+                 (LPARAM)LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APPICON)));
+    SendMessageW(g.hwnd, WM_SETICON, ICON_SMALL, (LPARAM)smallIcon);
 
     // 字体
     NONCLIENTMETRICSW ncm{sizeof(ncm)};
@@ -562,11 +712,15 @@ void open(HWND appWindow) {
     HWND tab = CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
                                0, 0, w, h, g.hwnd, (HMENU)kTab, GetModuleHandleW(nullptr), nullptr);
     SendMessageW(tab, WM_SETFONT, (WPARAM)g.font, TRUE);
+    g.tabImages = createTabImages();
+    TabCtrl_SetImageList(tab, g.tabImages);
+    TabCtrl_SetPadding(tab, px(8), px(5));
     const wchar_t* names[] = {L"General", L"Backend", L"Language", L"Shortcuts",
                               L"Behavior", L"Skip Apps", L"About"};
     for (int i = 0; i < 7; ++i) {
-        TCITEMW item{TCIF_TEXT};
+        TCITEMW item{TCIF_TEXT | TCIF_IMAGE};
         item.pszText = (LPWSTR)names[i];
+        item.iImage = i;
         TabCtrl_InsertItem(tab, i, &item);
     }
 
