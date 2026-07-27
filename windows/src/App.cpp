@@ -95,11 +95,16 @@ void App::applyEnabledState() {
                               s.rewriteShortcut.modifiers | MOD_NOREPEAT, s.rewriteShortcut.vk);
     if ((!ok1 || !ok2) && !hotkeyWarningShown_) {
         hotkeyWarningShown_ = true;
-        MessageBoxW(nullptr,
-                    L"Another application already uses one of Saypick's shortcuts.\n"
-                    L"Pick a different one in Settings → Shortcuts.",
+        std::wstring unavailable;
+        if (!ok1) unavailable += L"Translate selection: " + s.readShortcut.displayString();
+        if (!ok1 && !ok2) unavailable += L"\n";
+        if (!ok2) unavailable += L"Rewrite & replace: " + s.rewriteShortcut.displayString();
+        std::wstring message = L"These shortcuts could not be registered:\n\n" + unavailable +
+                               L"\n\nChoose different shortcuts in Settings → Shortcuts.";
+        MessageBoxW(nullptr, message.c_str(),
                     L"Saypick — shortcut unavailable", MB_OK | MB_ICONWARNING);
     }
+    if (ok1 && ok2) hotkeyWarningShown_ = false;
 
     setupSelectionTrigger();
 }
@@ -275,10 +280,14 @@ void App::startStream(const std::wstring& text, std::optional<Language> from, La
     currentReq_ = translator::Stream(
         {text, from, to, style},
         [hwnd](uint64_t id, const std::wstring& delta) {
-            PostMessageW(hwnd, WM_APP_TR_DELTA, (WPARAM)id, (LPARAM) new std::wstring(delta));
+            auto* payload = new std::wstring(delta);
+            if (!PostMessageW(hwnd, WM_APP_TR_DELTA, (WPARAM)id, (LPARAM)payload))
+                delete payload;
         },
         [hwnd](uint64_t id, bool ok, const std::wstring& error) {
-            PostMessageW(hwnd, WM_APP_TR_DONE, (WPARAM)id, (LPARAM) new DoneMsg{ok, error});
+            auto* payload = new DoneMsg{ok, error};
+            if (!PostMessageW(hwnd, WM_APP_TR_DONE, (WPARAM)id, (LPARAM)payload))
+                delete payload;
         });
 }
 
@@ -365,7 +374,8 @@ void App::proceedRewrite(const capture::Capture& capIn) {
                 c.text,
                 d.to,
             };
-            PostMessageW(hwnd, WM_APP_REWRITE_DONE, 0, (LPARAM)msg);
+            if (!PostMessageW(hwnd, WM_APP_REWRITE_DONE, 0, (LPARAM)msg))
+                delete msg;
         }).detach();
     }
 }

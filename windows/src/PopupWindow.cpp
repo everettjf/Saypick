@@ -196,7 +196,8 @@ void PopupWindow::layoutAndResize() {
     viewportHeight_ = textH;
     scrollY_ = std::clamp(scrollY_, 0, std::max(0, textHeight_ - viewportHeight_));
 
-    bool hasButtons = (!translation_.empty() && error_.empty()) || !error_.empty();
+    bool hasButtons = (!translation_.empty() && error_.empty()) ||
+                      (!error_.empty() && static_cast<bool>(onRetry));
     const int btnH = px(32);
     const int btnGap = px(10);
 
@@ -212,7 +213,7 @@ void PopupWindow::layoutAndResize() {
     int btnY = height - padY - btnH;
     int replaceW = showReplace_ ? px(84) : 0;
     int copyW = px(70);
-    if (!error_.empty()) {
+    if (!error_.empty() && onRetry) {
         rcCopy_ = rcReplace_ = RECT{};
         rcRetry_ = {width - padX - px(76), btnY, width - padX, btnY + btnH};
     } else if (hasButtons) {
@@ -361,7 +362,7 @@ void PopupWindow::paint(HDC dc) {
         drawButton(rcCopy_, copiedFlash_ ? L"Copied ✓" : L"Copy", false, hover_ == Region::Copy);
         if (showReplace_) drawButton(rcReplace_, L"Replace", true, hover_ == Region::Replace);
     }
-    if (!error_.empty())
+    if (!error_.empty() && onRetry)
         drawButton(rcRetry_, L"Retry", true, hover_ == Region::Retry);
 }
 

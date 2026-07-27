@@ -14,6 +14,10 @@ void CheckIfDue(HWND notifyWindow, UINT notifyMessage);
 /// 立即检查（忽略每日限制）
 void CheckNow(HWND notifyWindow, UINT notifyMessage);
 
+/// 用户主动检查：无论结果如何都投递消息。
+/// wParam: 0=已是最新版，1=有新版本，2=检查失败。
+void CheckNowInteractive(HWND notifyWindow, UINT notifyMessage);
+
 /// 最新版本的发布页（无则返回 releases 首页）
 std::wstring ReleasesURL();
 

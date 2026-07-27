@@ -18,6 +18,7 @@ namespace {
 constexpr wchar_t kClassName[] = L"SaypickSettings";
 // 工作线程取回 Ollama 模型列表：lParam = std::vector<std::wstring>*（接收方释放）
 constexpr UINT kMsgOllamaModels = WM_APP + 100;
+constexpr UINT kMsgUpdateResult = WM_APP + 101;
 
 enum CtrlId : int {
     kTab = 1000,
@@ -53,6 +54,7 @@ struct State {
     UINT dpi = 96;
     std::vector<std::vector<HWND>> pages;  // 每个 tab 页的控件
     bool loading = false;                  // 初始化填充时不触发保存
+    bool saveWarningShown = false;
 };
 
 State g;
@@ -513,8 +515,9 @@ void onCommand(int id, int code) {
         save = false;
         break;
     case kCheckUpdate:
-        updatechecker::CheckNow(g.appWindow, WM_APP_UPDATE);
-        updatechecker::OpenReleasesPage();
+        EnableWindow(ctrl(kCheckUpdate), FALSE);
+        SetWindowTextW(ctrl(kCheckUpdate), L"Checking…");
+        updatechecker::CheckNowInteractive(g.hwnd, kMsgUpdateResult);
         save = false;
         break;
 
@@ -640,7 +643,17 @@ void onCommand(int id, int code) {
         return;
     }
 
-    if (save) s.save();
+    if (save) {
+        if (s.save()) {
+            g.saveWarningShown = false;
+        } else if (!g.saveWarningShown) {
+            g.saveWarningShown = true;
+            MessageBoxW(g.hwnd,
+                        L"Saypick couldn't save your settings. Your existing settings file was "
+                        L"left unchanged.\n\nCheck that the settings folder is writable, then try again.",
+                        L"Saypick — settings not saved", MB_OK | MB_ICONWARNING);
+        }
+    }
     if (reapply) applyToApp();
 }
 
@@ -664,6 +677,22 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         delete models;
         return 0;
     }
+    case kMsgUpdateResult:
+        EnableWindow(ctrl(kCheckUpdate), TRUE);
+        SetWindowTextW(ctrl(kCheckUpdate), L"Check for updates");
+        if (wp == 1) {
+            if (MessageBoxW(hwnd, L"A new Saypick version is available. Open the download page?",
+                            L"Saypick update", MB_YESNO | MB_ICONINFORMATION) == IDYES)
+                updatechecker::OpenReleasesPage();
+        } else if (wp == 0) {
+            MessageBoxW(hwnd, L"You're using the latest version.", L"Saypick update",
+                        MB_OK | MB_ICONINFORMATION);
+        } else {
+            MessageBoxW(hwnd,
+                        L"Saypick couldn't check for updates. Check your internet connection and try again.",
+                        L"Saypick update", MB_OK | MB_ICONWARNING);
+        }
+        return 0;
     case WM_NOTIFY: {
         auto* hdr = (NMHDR*)lp;
         if (hdr->idFrom == kAboutLinks && (hdr->code == NM_CLICK || hdr->code == NM_RETURN)) {
