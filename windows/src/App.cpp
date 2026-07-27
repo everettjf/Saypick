@@ -260,6 +260,11 @@ void App::presentRead(const capture::Capture& cap) {
         p.resetForRetranslate();
         startStream(currentText_, currentSource_, newTarget, currentStyle_);
     };
+    popup.onRetry = [this] {
+        PopupWindow& p = PopupWindow::shared();
+        p.resetForRetranslate();
+        startStream(currentText_, currentSource_, p.target(), currentStyle_);
+    };
     popup.onClosed = [this] { translator::Cancel(currentReq_); };
 
     startStream(cap.text, dir.from, dir.to, s.readStyle);
@@ -333,6 +338,11 @@ void App::proceedRewrite(const capture::Capture& capIn) {
             p.resetForRetranslate();
             startStream(currentText_, currentSource_, newTarget, currentStyle_);
         };
+        popup.onRetry = [this] {
+            PopupWindow& p = PopupWindow::shared();
+            p.resetForRetranslate();
+            startStream(currentText_, currentSource_, p.target(), currentStyle_);
+        };
         popup.onClosed = [this] { translator::Cancel(currentReq_); };
 
         startStream(cap->text, dir.from, dir.to, s.rewriteStyle);
@@ -365,6 +375,7 @@ void App::showErrorPopup(const std::wstring& original, Language target, RECT anc
     popup.show(original, target, anchor, /*showReplace=*/false);
     popup.onReplace = nullptr;
     popup.onRetarget = nullptr;
+    popup.onRetry = nullptr;
     popup.onClosed = nullptr;
     popup.setError(error);
 }

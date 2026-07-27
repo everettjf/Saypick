@@ -63,6 +63,7 @@ void PopupWindow::show(const std::wstring& original, Language target, RECT ancho
     error_.clear();
     loading_ = true;
     copiedFlash_ = false;
+    scrollY_ = 0;
     target_ = target;
     anchor_ = anchor;
     showReplace_ = showReplace;
@@ -159,7 +160,12 @@ void PopupWindow::layoutAndResize() {
     const int s100 = (int)dpi_;
     auto px = [&](int v) { return MulDiv(v, s100, 96); };
 
-    const int width = px(380);
+    HMONITOR sizeMon = MonitorFromRect(&anchor_, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO sizeInfo{sizeof(sizeInfo)};
+    GetMonitorInfoW(sizeMon, &sizeInfo);
+    const int workWidth = sizeInfo.rcWork.right - sizeInfo.rcWork.left;
+    width_ = std::clamp(workWidth / 3, px(360), px(520));
+    const int width = width_;
     const int headerH = px(34);
     const int padX = px(14);
     const int padY = px(12);
@@ -175,7 +181,8 @@ void PopupWindow::layoutAndResize() {
     DrawTextW(dc, bodyText.c_str(), -1, &rc, DT_WORDBREAK | DT_CALCRECT);
     SelectObject(dc, old);
     ReleaseDC(hwnd_, dc);
-    int textH = rc.bottom > px(20) ? rc.bottom : px(20);
+    textHeight_ = rc.bottom > px(20) ? rc.bottom : px(20);
+    int textH = textHeight_;
 
     // 高度钳制：正文最多占所在显示器工作区的 60%，超出部分画省略号
     // （Copy 复制的仍是完整译文）
@@ -186,23 +193,30 @@ void PopupWindow::layoutAndResize() {
         int maxTextH = (miClamp.rcWork.bottom - miClamp.rcWork.top) * 6 / 10;
         if (textH > maxTextH) textH = maxTextH;
     }
+    viewportHeight_ = textH;
+    scrollY_ = std::clamp(scrollY_, 0, std::max(0, textHeight_ - viewportHeight_));
 
-    bool hasButtons = !translation_.empty() && error_.empty();
-    const int btnH = px(26);
+    bool hasButtons = (!translation_.empty() && error_.empty()) || !error_.empty();
+    const int btnH = px(32);
     const int btnGap = px(10);
 
     int height = headerH + 1 + padY + textH + (hasButtons ? btnGap + btnH : 0) + padY;
 
     // 命中区域
     const int chipH = px(20);
-    rcClose_ = {width - padX - px(16), (headerH - px(16)) / 2, width - padX, (headerH + px(16)) / 2};
+    rcClose_ = {width - padX - px(32), (headerH - px(32)) / 2,
+                width - padX, (headerH + px(32)) / 2};
     int langW = px(86);
     rcLang_ = {rcClose_.left - px(10) - langW, (headerH - chipH) / 2, rcClose_.left - px(10), (headerH + chipH) / 2};
 
     int btnY = height - padY - btnH;
     int replaceW = showReplace_ ? px(84) : 0;
     int copyW = px(70);
-    if (hasButtons) {
+    if (!error_.empty()) {
+        rcCopy_ = rcReplace_ = RECT{};
+        rcRetry_ = {width - padX - px(76), btnY, width - padX, btnY + btnH};
+    } else if (hasButtons) {
+        rcRetry_ = {};
         int x = width - padX;
         if (showReplace_) {
             rcReplace_ = {x - replaceW, btnY, x, btnY + btnH};
@@ -212,7 +226,7 @@ void PopupWindow::layoutAndResize() {
         }
         rcCopy_ = {x - copyW, btnY, x, btnY + btnH};
     } else {
-        rcCopy_ = rcReplace_ = RECT{};
+        rcCopy_ = rcReplace_ = rcRetry_ = RECT{};
     }
 
     // 定位：优先锚点下方，放不下改上方；夹在锚点所在显示器工作区内
@@ -290,7 +304,12 @@ void PopupWindow::paint(HDC dc) {
 
     // ---- 正文 ----
     SelectObject(dc, fontBody_);
-    RECT rcText{padX, headerH + 1 + padY, client.right - padX, client.bottom - padY};
+    int textBottom = headerH + 1 + padY + viewportHeight_;
+    RECT clipText{padX, headerH + 1 + padY, client.right - padX, textBottom};
+    int saved = SaveDC(dc);
+    IntersectClipRect(dc, clipText.left, clipText.top, clipText.right, clipText.bottom);
+    RECT rcText{padX, headerH + 1 + padY - scrollY_, client.right - padX,
+                headerH + 1 + padY - scrollY_ + textHeight_};
     if (!error_.empty()) {
         SetTextColor(dc, th.error);
         std::wstring msg = L"⚠ " + error_;
@@ -300,9 +319,20 @@ void PopupWindow::paint(HDC dc) {
         DrawTextW(dc, L"Translating…", -1, &rcText, DT_WORDBREAK);
     } else {
         SetTextColor(dc, th.text);
-        // 超出钳制高度时在末行加省略号
         DrawTextW(dc, translation_.c_str(), -1, &rcText,
-                  DT_WORDBREAK | DT_NOPREFIX | DT_END_ELLIPSIS | DT_EDITCONTROL);
+                  DT_WORDBREAK | DT_NOPREFIX | DT_EDITCONTROL);
+    }
+    RestoreDC(dc, saved);
+    if (textHeight_ > viewportHeight_) {
+        const int trackTop = headerH + 1 + padY;
+        const int trackH = viewportHeight_;
+        const int thumbH = std::max(px(24), trackH * viewportHeight_ / textHeight_);
+        const int maxScroll = textHeight_ - viewportHeight_;
+        const int thumbY = trackTop + (trackH - thumbH) * scrollY_ / std::max(1, maxScroll);
+        RECT thumb{client.right - px(5), thumbY, client.right - px(2), thumbY + thumbH};
+        HBRUSH sb = CreateSolidBrush(th.buttonBorder);
+        FillRect(dc, &thumb, sb);
+        DeleteObject(sb);
     }
 
     // ---- 按钮 ----
@@ -331,6 +361,8 @@ void PopupWindow::paint(HDC dc) {
         drawButton(rcCopy_, copiedFlash_ ? L"Copied ✓" : L"Copy", false, hover_ == Region::Copy);
         if (showReplace_) drawButton(rcReplace_, L"Replace", true, hover_ == Region::Replace);
     }
+    if (!error_.empty())
+        drawButton(rcRetry_, L"Retry", true, hover_ == Region::Retry);
 }
 
 PopupWindow::Region PopupWindow::hitTest(POINT pt) const {
@@ -338,6 +370,7 @@ PopupWindow::Region PopupWindow::hitTest(POINT pt) const {
     if (PtInRect(&rcLang_, pt)) return Region::Lang;
     if (rcCopy_.right > rcCopy_.left && PtInRect(&rcCopy_, pt)) return Region::Copy;
     if (showReplace_ && rcReplace_.right > rcReplace_.left && PtInRect(&rcReplace_, pt)) return Region::Replace;
+    if (rcRetry_.right > rcRetry_.left && PtInRect(&rcRetry_, pt)) return Region::Retry;
     return Region::None;
 }
 
@@ -455,6 +488,9 @@ LRESULT PopupWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case Region::Replace:
             if (onReplace) onReplace();
             return 0;
+        case Region::Retry:
+            if (onRetry) onRetry();
+            return 0;
         default:
             return 0;
         }
@@ -464,6 +500,14 @@ LRESULT PopupWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             KillTimer(hwnd_, kCopiedTimer);
             copiedFlash_ = false;
             if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
+        }
+        return 0;
+    case WM_MOUSEWHEEL:
+        if (textHeight_ > viewportHeight_) {
+            int step = MulDiv(36, (int)dpi_, 96);
+            scrollY_ = std::clamp(scrollY_ - GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA * step,
+                                  0, textHeight_ - viewportHeight_);
+            InvalidateRect(hwnd_, nullptr, FALSE);
         }
         return 0;
     case WM_GETTEXT: {
