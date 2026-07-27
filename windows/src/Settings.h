@@ -65,6 +65,7 @@ struct Settings {
     // --- 持久化 ---
     static Settings& shared();
     void load();
-    void save() const;
+    /// 原子保存；失败时保留旧文件并返回 false。
+    bool save() const;
     static std::wstring filePath();
 };

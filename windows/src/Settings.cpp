@@ -42,11 +42,21 @@ std::wstring Settings::filePath() {
 void Settings::load() {
     std::ifstream f(filePath(), std::ios::binary);
     if (!f) return;
+    f.seekg(0, std::ios::end);
+    const auto length = f.tellg();
+    if (length < 0 || length > 1024 * 1024) {
+        util::Log("settings: refusing invalid file size");
+        return;
+    }
+    f.seekg(0, std::ios::beg);
     std::stringstream ss;
     ss << f.rdbuf();
     bool ok = false;
     json::Value root = json::Parse(ss.str(), &ok);
-    if (!ok || !root.isObject()) return;
+    if (!ok || !root.isObject()) {
+        util::Log("settings: invalid JSON, using safe defaults");
+        return;
+    }
 
     auto str = [&](const char* k, const std::string& def) {
         return root[k].isString() ? root[k].asString() : def;
@@ -60,9 +70,13 @@ void Settings::load() {
 
     ollamaHost = str("ollamaHost", ollamaHost);
     ollamaPort = root["ollamaPort"].isNull() ? ollamaPort : root["ollamaPort"].asInt(ollamaPort);
+    if (ollamaPort < 1 || ollamaPort > 65535) ollamaPort = 11434;
     ollamaModel = str("ollamaModel", ollamaModel);
+    if (ollamaHost.size() > 2048) ollamaHost = "http://127.0.0.1";
+    if (ollamaModel.size() > 256) ollamaModel = "qwen2.5:3b";
 
     openAIBaseURL = str("openAIBaseURL", openAIBaseURL);
+    if (openAIBaseURL.size() > 2048) openAIBaseURL = "https://api.openai.com/v1";
     const std::string legacyKey = str("openAIKey", "");
     wchar_t testDir[2]{};
     const bool isolatedTest = GetEnvironmentVariableW(L"SAYPICK_DATA_DIR", testDir, 2) != 0;
@@ -78,6 +92,7 @@ void Settings::load() {
         }
     }
     openAIModel = str("openAIModel", openAIModel);
+    if (openAIModel.size() > 256) openAIModel = "gpt-5-mini";
 
     if (auto l = lang::FromCode(str("nativeLanguage", ""))) nativeLanguage = *l;
     if (auto l = lang::FromCode(str("foreignLanguage", ""))) foreignLanguage = *l;
@@ -87,8 +102,13 @@ void Settings::load() {
     auto loadHotkey = [&](const char* k, Hotkey& hk) {
         const json::Value& v = root[k];
         if (v.isObject()) {
-            hk.modifiers = (UINT)v["modifiers"].asInt((int)hk.modifiers);
-            hk.vk = (UINT)v["vk"].asInt((int)hk.vk);
+            UINT modifiers = (UINT)v["modifiers"].asInt((int)hk.modifiers);
+            UINT vk = (UINT)v["vk"].asInt((int)hk.vk);
+            constexpr UINT allowed = MOD_ALT | MOD_CONTROL | MOD_SHIFT | MOD_WIN;
+            if ((modifiers & ~allowed) == 0 && vk > 0 && vk < 256) {
+                hk.modifiers = modifiers;
+                hk.vk = vk;
+            }
         }
     };
     loadHotkey("readShortcut", readShortcut);
@@ -104,15 +124,22 @@ void Settings::load() {
 
     skipApps.clear();
     if (const json::Array* arr = root["skipApps"].array())
-        for (auto& item : *arr)
-            if (item.isString()) skipApps.push_back(util::Widen(item.asString()));
+        for (auto& item : *arr) {
+            if (!item.isString() || skipApps.size() >= 100) continue;
+            std::wstring app = util::Trim(util::Widen(item.asString()));
+            if (app.empty() || app.size() > 260) continue;
+            bool duplicate = false;
+            for (const auto& existing : skipApps)
+                if (util::ToLower(existing) == util::ToLower(app)) duplicate = true;
+            if (!duplicate) skipApps.push_back(std::move(app));
+        }
 
     hasCompletedFirstLaunch = boolean("hasCompletedFirstLaunch", false);
     lastUpdateCheck = (long long)root["lastUpdateCheck"].asNumber(0);
     if (migratedLegacyKey) save(); // rewrite JSON without the plaintext key
 }
 
-void Settings::save() const {
+bool Settings::save() const {
     json::Object root;
     root["enabled"] = enabled;
     root["backend"] = backend == TranslationBackend::OpenAI ? "openai" : "ollama";
@@ -125,7 +152,10 @@ void Settings::save() const {
     wchar_t testDir[2]{};
     const bool isolatedTest = GetEnvironmentVariableW(L"SAYPICK_DATA_DIR", testDir, 2) != 0;
     if (isolatedTest) root["openAIKey"] = openAIKey;
-    else credentials::SaveCloudApiKey(openAIKey);
+    else if (!credentials::SaveCloudApiKey(openAIKey)) {
+        util::Log("settings: credential save failed (%lu)", GetLastError());
+        return false;
+    }
     root["openAIModel"] = openAIModel;
 
     root["nativeLanguage"] = lang::Code(nativeLanguage);
@@ -161,8 +191,27 @@ void Settings::save() const {
     std::wstring tmp = path + L".tmp";
     {
         std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
-        if (!f) return;
+        if (!f) {
+            util::Log("settings: cannot open temp file (%lu)", GetLastError());
+            return false;
+        }
         f << json::Value(std::move(root)).dump();
+        f.flush();
+        if (!f) {
+            util::Log("settings: temp write failed");
+            f.close();
+            DeleteFileW(tmp.c_str());
+            return false;
+        }
     }
-    MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
+    // 杀毒软件/索引器可能短暂占用目标文件，做有限重试但不阻塞太久。
+    for (int attempt = 0; attempt < 4; ++attempt) {
+        if (MoveFileExW(tmp.c_str(), path.c_str(),
+                        MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+            return true;
+        if (attempt < 3) Sleep(15 * (attempt + 1));
+    }
+    util::Log("settings: atomic replace failed (%lu)", GetLastError());
+    DeleteFileW(tmp.c_str());
+    return false;
 }

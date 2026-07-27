@@ -43,28 +43,43 @@ bool isNewer(const std::string& latest, const std::string& current) {
     return false;
 }
 
-void checkWorker(HWND notifyWindow, UINT notifyMessage) {
+void checkWorker(HWND notifyWindow, UINT notifyMessage, bool alwaysNotify) {
     http::Result r = http::Get(L"https://api.github.com/repos/everettjf/Saypick/releases/latest",
                                L"Accept: application/vnd.github.v3+json\r\n");
-    if (!r.ok) return;
+    if (!r.ok) {
+        if (alwaysNotify && notifyWindow) PostMessageW(notifyWindow, notifyMessage, 2, 0);
+        return;
+    }
     bool ok = false;
     json::Value v = json::Parse(r.body, &ok);
-    if (!ok || v["prerelease"].asBool()) return;
+    if (!ok || v["prerelease"].asBool()) {
+        if (alwaysNotify && notifyWindow) PostMessageW(notifyWindow, notifyMessage, 2, 0);
+        return;
+    }
 
     std::string tag = v["tag_name"].asString();
-    if (tag.empty() || !isNewer(tag, SAYPICK_VERSION_STRING)) return;
+    if (tag.empty()) {
+        if (alwaysNotify && notifyWindow) PostMessageW(notifyWindow, notifyMessage, 2, 0);
+        return;
+    }
+    const bool newer = isNewer(tag, SAYPICK_VERSION_STRING);
 
-    {
+    if (newer) {
         std::lock_guard lock(g_mu);
         g_latestUrl = util::Widen(v["html_url"].asString());
     }
-    if (notifyWindow) PostMessageW(notifyWindow, notifyMessage, 1, 0);
+    if (notifyWindow && (newer || alwaysNotify))
+        PostMessageW(notifyWindow, notifyMessage, newer ? 1 : 0, 0);
 }
 
 } // namespace
 
 void CheckNow(HWND notifyWindow, UINT notifyMessage) {
-    std::thread(checkWorker, notifyWindow, notifyMessage).detach();
+    std::thread(checkWorker, notifyWindow, notifyMessage, false).detach();
+}
+
+void CheckNowInteractive(HWND notifyWindow, UINT notifyMessage) {
+    std::thread(checkWorker, notifyWindow, notifyMessage, true).detach();
 }
 
 void CheckIfDue(HWND notifyWindow, UINT notifyMessage) {

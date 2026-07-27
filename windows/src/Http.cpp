@@ -7,6 +7,8 @@ namespace http {
 
 namespace {
 
+constexpr size_t kMaxBufferedResponse = 8 * 1024 * 1024;
+
 struct Handle {
     HINTERNET h = nullptr;
     Handle() = default;
@@ -46,8 +48,8 @@ Result request(const std::wstring& url,
                                WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0));
     if (!session) { r.error = lastError("WinHttpOpen"); return r; }
 
-    // 长流式响应：接收超时放宽到 5 分钟
-    WinHttpSetTimeouts(session.h, 10000, 10000, 30000, 300000);
+    // 连接失败应尽快可恢复；单次 90 秒无响应后让 UI 提供 Retry。
+    WinHttpSetTimeouts(session.h, 10000, 10000, 30000, 90000);
 
     Handle conn(WinHttpConnect(session.h, host, uc.nPort, 0));
     if (!conn) { r.error = lastError("WinHttpConnect"); return r; }
@@ -87,8 +89,15 @@ Result request(const std::wstring& url,
             if (!WinHttpReadData(req.h, buf.data(), toRead, &got)) { r.error = lastError("Read"); return r; }
             if (got == 0) break;
             avail -= got;
-            if (onChunk && status >= 200 && status < 300) (*onChunk)(buf.data(), got);
-            else r.body.append(buf.data(), got);
+            if (onChunk && status >= 200 && status < 300) {
+                (*onChunk)(buf.data(), got);
+            } else {
+                if (r.body.size() + got > kMaxBufferedResponse) {
+                    r.error = "Response too large";
+                    return r;
+                }
+                r.body.append(buf.data(), got);
+            }
         }
     }
 

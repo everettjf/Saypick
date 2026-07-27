@@ -109,6 +109,14 @@ public:
         }
     }
 
+    void finish(const std::function<void(const std::string&)>& onLine) {
+        if (!buf_.empty()) {
+            if (buf_.back() == '\r') buf_.pop_back();
+            if (!buf_.empty()) onLine(buf_);
+            buf_.clear();
+        }
+    }
+
 private:
     std::string buf_;
     bool bomChecked_ = false;
@@ -157,6 +165,21 @@ struct StreamOutcome {
     std::wstring full;
 };
 
+std::wstring providerError(const http::Result& result) {
+    if (!result.body.empty()) {
+        bool ok = false;
+        json::Value body = json::Parse(result.body, &ok);
+        if (ok) {
+            const json::Value& nested = body["error"];
+            if (nested.isObject() && nested["message"].isString())
+                return util::Widen(nested["message"].asString());
+            if (nested.isString()) return util::Widen(nested.asString());
+            if (body["message"].isString()) return util::Widen(body["message"].asString());
+        }
+    }
+    return util::Widen(result.error);
+}
+
 StreamOutcome runOllama(const TranslationRequest& req, const BackendConfig& s, uint64_t id,
                         const DeltaFn& onDelta, const std::atomic<bool>& cancel) {
     StreamOutcome out;
@@ -182,8 +205,7 @@ StreamOutcome runOllama(const TranslationRequest& req, const BackendConfig& s, u
     std::wstring url = util::Widen(s.ollamaHost) + L":" + std::to_wstring(s.ollamaPort) + L"/api/generate";
 
     LineAssembler lines;
-    auto onChunk = [&](const char* data, size_t len) {
-        lines.feed(data, len, [&](const std::string& line) {
+    auto onLine = [&](const std::string& line) {
             bool ok = false;
             json::Value v = json::Parse(line, &ok);
             if (!ok) return;
@@ -193,7 +215,9 @@ StreamOutcome runOllama(const TranslationRequest& req, const BackendConfig& s, u
                 out.full += wdelta;
                 onDelta(id, wdelta);
             }
-        });
+    };
+    auto onChunk = [&](const char* data, size_t len) {
+        lines.feed(data, len, onLine);
     };
 
     http::Result r = http::PostStream(url, makeBody(true), L"", onChunk, cancel);
@@ -210,6 +234,7 @@ StreamOutcome runOllama(const TranslationRequest& req, const BackendConfig& s, u
                         : util::Widen(r.error);
         return out;
     }
+    lines.finish(onLine);
     out.ok = true;
     return out;
 }
@@ -266,8 +291,7 @@ StreamOutcome runOpenAI(const TranslationRequest& req, const BackendConfig& s, u
     }
 
     LineAssembler lines;
-    auto onChunk = [&](const char* data, size_t len) {
-        lines.feed(data, len, [&](const std::string& line) {
+    auto onLine = [&](const std::string& line) {
             if (line.rfind("data:", 0) != 0) return;
             std::string payload = util::Trim(line.substr(5));
             if (payload == "[DONE]") return;
@@ -280,15 +304,18 @@ StreamOutcome runOpenAI(const TranslationRequest& req, const BackendConfig& s, u
                 out.full += wdelta;
                 onDelta(id, wdelta);
             }
-        });
+    };
+    auto onChunk = [&](const char* data, size_t len) {
+        lines.feed(data, len, onLine);
     };
 
     http::Result r = http::PostStream(util::Widen(base) + L"/chat/completions",
                                       json::Value(std::move(body)).dump(), headers, onChunk, cancel);
     if (!r.ok) {
-        out.error = util::Widen(r.error);
+        out.error = providerError(r);
         return out;
     }
+    lines.finish(onLine);
     out.ok = true;
     return out;
 }
