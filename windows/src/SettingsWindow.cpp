@@ -7,6 +7,7 @@
 #include "UpdateChecker.h"
 #include "Util.h"
 #include <commctrl.h>
+#include <dwmapi.h>
 #include <shellapi.h>
 #include <string>
 #include <thread>
@@ -39,12 +40,15 @@ enum CtrlId : int {
     kSkipEdit, kSkipAdd, kSkipList, kSkipRemove, kSkipHint,
     // About
     kAboutTitle, kAboutDesc, kAboutLinks,
+    // Page headings (must remain contiguous)
+    kPageTitle0, kPageTitle1, kPageTitle2, kPageTitle3,
+    kPageTitle4, kPageTitle5, kPageTitle6,
 };
 
 struct State {
     HWND hwnd = nullptr;
     HWND appWindow = nullptr;
-    HFONT font = nullptr, fontBold = nullptr;
+    HFONT font = nullptr, fontBold = nullptr, fontTitle = nullptr;
     HIMAGELIST tabImages = nullptr;
     UINT dpi = 96;
     std::vector<std::vector<HWND>> pages;  // 每个 tab 页的控件
@@ -54,6 +58,12 @@ struct State {
 State g;
 
 int px(int v) { return MulDiv(v, (int)g.dpi, 96); }
+
+constexpr COLORREF kPageBg = RGB(0xF3, 0xF3, 0xF3);
+constexpr COLORREF kNavBg = RGB(0xF0, 0xEF, 0xF5);
+constexpr COLORREF kText = RGB(0x20, 0x20, 0x24);
+constexpr COLORREF kSecondary = RGB(0x67, 0x67, 0x72);
+constexpr COLORREF kAccent = RGB(0x7C, 0x5C, 0xFF);
 
 HWND ctrl(int id) { return GetDlgItem(g.hwnd, id); }
 
@@ -304,44 +314,64 @@ void updateLangWarn() {
 void buildPages() {
     const Settings& s = Settings::shared();
     g.pages.assign(7, {});
-    const int x = 24, w = 620;
+    const int x = 222, w = 560;
     int y;
+    const wchar_t* pageTitles[] = {
+        L"General", L"Translation backend", L"Languages", L"Keyboard shortcuts",
+        L"Behavior", L"Excluded apps", L"About Saypick"
+    };
+    for (int page = 0; page < 7; ++page) {
+        HWND title = makeLabel(pageTitles[page], x, 26, w, kPageTitle0 + page);
+        SendMessageW(title, WM_SETFONT, (WPARAM)g.fontTitle, TRUE);
+        SetWindowPos(title, nullptr, px(x), px(26), px(w), px(36), SWP_NOZORDER);
+        g.pages[page].push_back(title);
+    }
 
     // --- 0 General ---
-    y = 56;
-    g.pages[0] = {
-        make(L"BUTTON", L"Enable Saypick", WS_TABSTOP | BS_AUTOCHECKBOX, x, y, w, 22, kEnable),
-        make(L"BUTTON", L"Launch at login", WS_TABSTOP | BS_AUTOCHECKBOX, x, y + 32, w, 22, kLogin),
-        makeLabel(L"Version " SAYPICK_VERSION_STRING, x, y + 76, 200, kVersionLabel),
-        make(L"BUTTON", L"Check for updates", WS_TABSTOP | BS_PUSHBUTTON, x, y + 102, 150, 26, kCheckUpdate),
+    y = 82;
+    {
+    std::vector<HWND> controls = {
+        makeLabel(L"APP STATUS", x, y, w, -1, true),
+        make(L"BUTTON", L"Enable Saypick", WS_TABSTOP | BS_AUTOCHECKBOX, x, y + 26, 180, 22, kEnable),
+        makeLabel(L"STARTUP", x, y + 62, w, -1, true),
+        make(L"BUTTON", L"Launch at login", WS_TABSTOP | BS_AUTOCHECKBOX, x, y + 88, 180, 22, kLogin),
+        makeLabel(L"UPDATES", x, y + 150, w, -1, true),
+        makeLabel(L"Version " SAYPICK_VERSION_STRING, x, y + 178, 200, kVersionLabel),
+        make(L"BUTTON", L"Check for updates", WS_TABSTOP | BS_PUSHBUTTON, x, y + 206, 150, 32, kCheckUpdate),
     };
+    g.pages[0].insert(g.pages[0].end(), controls.begin(), controls.end());
+    }
     CheckDlgButton(g.hwnd, kEnable, s.enabled ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(g.hwnd, kLogin, launchatlogin::IsEnabled() ? BST_CHECKED : BST_UNCHECKED);
 
     // --- 1 Backend ---
-    y = 56;
-    g.pages[1] = {
+    y = 82;
+    {
+    std::vector<HWND> controls = {
+        makeLabel(L"PROVIDER", x, y, w, -1, true),
         make(L"BUTTON", L"Local (Ollama) — private, offline", WS_TABSTOP | WS_GROUP | BS_AUTORADIOBUTTON,
-             x, y, w, 22, kBackendOllama),
-        makeLabel(L"Model:", x + 20, y + 30, 60, kOllamaModelLabel),
+             x, y + 26, 300, 22, kBackendOllama),
+        makeLabel(L"Ollama model", x + 20, y + 58, 90, kOllamaModelLabel),
         // 可编辑下拉框：列出已装模型，也允许手输
-        make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWN | WS_VSCROLL, x + 85, y + 28, 220, 240, kOllamaModel),
-        make(L"BUTTON", L"Refresh", WS_TABSTOP | BS_PUSHBUTTON, x + 315, y + 27, 70, 26, kOllamaRefresh),
+        make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWN | WS_VSCROLL, x + 120, y + 54, 250, 240, kOllamaModel),
+        make(L"BUTTON", L"Refresh", WS_TABSTOP | BS_PUSHBUTTON, x + 380, y + 53, 80, 32, kOllamaRefresh),
         makeLabel(L"Ollama at http://127.0.0.1:11434 — run `ollama serve` and pull a model first.",
-                  x + 20, y + 58, w - 20, kOllamaHint),
-        make(L"BUTTON", L"Cloud API — OpenAI-compatible streaming", WS_TABSTOP | BS_AUTORADIOBUTTON,
-             x, y + 96, w, 22, kBackendOpenAI),
-        makeLabel(L"Provider:", x + 20, y + 126, 72, kOaiProviderLabel),
-        make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST, x + 100, y + 123, 210, 180, kOaiProvider),
-        makeLabel(L"Base URL:", x + 20, y + 158, 72, kOaiUrlLabel),
-        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 100, y + 155, 390, 24, kOaiUrl),
-        makeLabel(L"API key:", x + 20, y + 190, 72, kOaiKeyLabel),
-        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL | ES_PASSWORD, x + 100, y + 187, 390, 24, kOaiKey),
-        makeLabel(L"Model:", x + 20, y + 222, 72, kOaiModelLabel),
-        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 100, y + 219, 260, 24, kOaiModel),
+                  x + 20, y + 90, w - 20, kOllamaHint),
+        make(L"BUTTON", L"OpenAI-compatible API", WS_TABSTOP | BS_AUTORADIOBUTTON,
+             x, y + 128, 260, 22, kBackendOpenAI),
+        makeLabel(L"Provider", x + 20, y + 160, 90, kOaiProviderLabel),
+        make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST, x + 120, y + 156, 250, 180, kOaiProvider),
+        makeLabel(L"Base URL", x + 20, y + 198, 90, kOaiUrlLabel),
+        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 120, y + 194, 400, 32, kOaiUrl),
+        makeLabel(L"API key", x + 20, y + 236, 90, kOaiKeyLabel),
+        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL | ES_PASSWORD, x + 120, y + 232, 400, 32, kOaiKey),
+        makeLabel(L"API model", x + 20, y + 274, 90, kOaiModelLabel),
+        make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 120, y + 270, 280, 32, kOaiModel),
         makeLabel(L"API key is stored securely in Windows Credential Manager.",
-                  x + 20, y + 252, w - 20, kOaiHint),
+                  x + 20, y + 310, w - 20, kOaiHint),
     };
+    g.pages[1].insert(g.pages[1].end(), controls.begin(), controls.end());
+    }
     CheckDlgButton(g.hwnd, s.backend == TranslationBackend::Ollama ? kBackendOllama : kBackendOpenAI, BST_CHECKED);
     SetWindowTextW(ctrl(kOllamaModel), util::Widen(s.ollamaModel).c_str());
     SetWindowTextW(ctrl(kOaiUrl), util::Widen(s.openAIBaseURL).c_str());
@@ -356,8 +386,9 @@ void buildPages() {
     updateBackendEnabled();
 
     // --- 2 Language ---
-    y = 56;
-    g.pages[2] = {
+    y = 82;
+    {
+    std::vector<HWND> controls = {
         makeLabel(L"Native language:", x, y + 3, 120, kNativeLabel),
         make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL, x + 140, y, 240, 300, kNative),
         makeLabel(L"Foreign language:", x, y + 37, 120, kForeignLabel),
@@ -368,6 +399,8 @@ void buildPages() {
         make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST, x + 140, y + 116, 240, 200, kRewriteDir),
         makeLabel(L"", x, y + 156, w, kLangWarn),
     };
+    g.pages[2].insert(g.pages[2].end(), controls.begin(), controls.end());
+    }
     fillLanguageCombo(ctrl(kNative), s.nativeLanguage);
     fillLanguageCombo(ctrl(kForeign), s.foreignLanguage);
     fillDirectionCombo(ctrl(kReadDir), s.readDirection);
@@ -377,8 +410,9 @@ void buildPages() {
     SetWindowPos(ctrl(kLangWarn), nullptr, px(x), px(y + 156), px(w), px(40), SWP_NOZORDER);
 
     // --- 3 Shortcuts ---
-    y = 56;
-    g.pages[3] = {
+    y = 82;
+    {
+    std::vector<HWND> controls = {
         makeLabel(L"Translate selection (read):", x, y + 4, 180, kHkReadLabel),
         make(HOTKEY_CLASSW, L"", WS_TABSTOP, x + 195, y, 180, 24, kHkRead),
         makeLabel(L"Rewrite && replace (write):", x, y + 38, 180, kHkRewriteLabel),
@@ -386,12 +420,15 @@ void buildPages() {
         makeLabel(L"Click a field and press the new key combo. Applied immediately.",
                   x, y + 76, w, kHkNote),
     };
+    g.pages[3].insert(g.pages[3].end(), controls.begin(), controls.end());
+    }
     SendMessageW(ctrl(kHkRead), HKM_SETHOTKEY, hotkeyToControl(s.readShortcut), 0);
     SendMessageW(ctrl(kHkRewrite), HKM_SETHOTKEY, hotkeyToControl(s.rewriteShortcut), 0);
 
     // --- 4 Behavior ---
-    y = 56;
-    g.pages[4] = {
+    y = 82;
+    {
+    std::vector<HWND> controls = {
         makeLabel(L"On text selection:", x, y + 3, 130, kTriggerLabel),
         make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST, x + 150, y, 230, 200, kTrigger),
         make(L"BUTTON", L"Preview before replacing (rewrite)", WS_TABSTOP | BS_AUTOCHECKBOX,
@@ -401,6 +438,8 @@ void buildPages() {
         makeLabel(L"Rewrite style:", x, y + 121, 130, kRewriteStyleLabel),
         make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST, x + 150, y + 118, 230, 200, kRewriteStyle),
     };
+    g.pages[4].insert(g.pages[4].end(), controls.begin(), controls.end());
+    }
     {
         HWND trig = ctrl(kTrigger);
         const wchar_t* items[] = {L"Off (shortcut only)", L"Show floating icon", L"Auto-translate"};
@@ -412,21 +451,25 @@ void buildPages() {
     fillStyleCombo(ctrl(kRewriteStyle), s.rewriteStyle);
 
     // --- 5 Skip Apps ---
-    y = 56;
-    g.pages[5] = {
+    y = 82;
+    {
+    std::vector<HWND> controls = {
         make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x, y, 280, 24, kSkipEdit),
         make(L"BUTTON", L"Add", WS_TABSTOP | BS_PUSHBUTTON, x + 290, y - 1, 70, 26, kSkipAdd),
         make(L"LISTBOX", L"", WS_TABSTOP | WS_BORDER | WS_VSCROLL | LBS_NOTIFY, x, y + 34, 360, 240, kSkipList),
         make(L"BUTTON", L"Remove", WS_TABSTOP | BS_PUSHBUTTON, x + 370, y + 34, 80, 26, kSkipRemove),
-        makeLabel(L"Saypick stays inactive in these apps (exe name, e.g. notepad or code.exe).",
+        makeLabel(L"Saypick stays inactive in these apps (executable name, e.g. notepad.exe or code.exe).",
                   x, y + 284, w, kSkipHint),
     };
+    g.pages[5].insert(g.pages[5].end(), controls.begin(), controls.end());
+    }
     for (auto& app : s.skipApps)
         SendMessageW(ctrl(kSkipList), LB_ADDSTRING, 0, (LPARAM)app.c_str());
 
     // --- 6 About ---
-    y = 56;
-    g.pages[6] = {
+    y = 82;
+    {
+    std::vector<HWND> controls = {
         makeLabel(L"Saypick " SAYPICK_VERSION_STRING, x, y, 300, kAboutTitle, true),
         makeLabel(L"System-wide AI translation && inline rewrite for Windows.\n"
                   L"Private local models or secure OpenAI-compatible cloud APIs.",
@@ -437,6 +480,8 @@ void buildPages() {
              L"<a href=\"https://discord.com/invite/eGzEaP6TzR\">Discord</a>",
              WS_TABSTOP, x, y + 84, w, 22, kAboutLinks),
     };
+    g.pages[6].insert(g.pages[6].end(), controls.begin(), controls.end());
+    }
     // 描述区两行高
     SetWindowPos(ctrl(kAboutDesc), nullptr, px(x), px(y + 28), px(w), px(40), SWP_NOZORDER);
 }
@@ -455,6 +500,10 @@ void onCommand(int id, int code) {
     bool save = true, reapply = false;
 
     switch (id) {
+    case kTab:
+        if (code == LBN_SELCHANGE)
+            showPage((int)SendMessageW(ctrl(kTab), LB_GETCURSEL, 0, 0));
+        return;
     case kEnable:
         s.enabled = IsDlgButtonChecked(g.hwnd, kEnable) == BST_CHECKED;
         reapply = true;
@@ -617,10 +666,6 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
     case WM_NOTIFY: {
         auto* hdr = (NMHDR*)lp;
-        if (hdr->idFrom == kTab && hdr->code == TCN_SELCHANGE) {
-            showPage(TabCtrl_GetCurSel(hdr->hwndFrom));
-            return 0;
-        }
         if (hdr->idFrom == kAboutLinks && (hdr->code == NM_CLICK || hdr->code == NM_RETURN)) {
             auto* link = (NMLINK*)lp;
             ShellExecuteW(nullptr, L"open", link->item.szUrl, nullptr, nullptr, SW_SHOWNORMAL);
@@ -628,13 +673,70 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
         break;
     }
-    case WM_CTLCOLORSTATIC:
+    case WM_DRAWITEM: {
+        auto* item = reinterpret_cast<DRAWITEMSTRUCT*>(lp);
+        if (item->CtlID != kTab || item->itemID == (UINT)-1) break;
+        const bool selected = (item->itemState & ODS_SELECTED) != 0;
+        HBRUSH bg = CreateSolidBrush(selected ? RGB(0xE4, 0xDF, 0xFF) : kNavBg);
+        FillRect(item->hDC, &item->rcItem, bg);
+        DeleteObject(bg);
+        if (selected) {
+            RECT accent{item->rcItem.left, item->rcItem.top + px(7),
+                        item->rcItem.left + px(3), item->rcItem.bottom - px(7)};
+            HBRUSH ab = CreateSolidBrush(kAccent);
+            FillRect(item->hDC, &accent, ab);
+            DeleteObject(ab);
+        }
+        wchar_t text[64]{};
+        SendMessageW(item->hwndItem, LB_GETTEXT, item->itemID, (LPARAM)text);
+        SetBkMode(item->hDC, TRANSPARENT);
+        SetTextColor(item->hDC, kText);
+        SelectObject(item->hDC, g.font);
+        RECT tr = item->rcItem;
+        tr.left += px(18);
+        DrawTextW(item->hDC, text, -1, &tr, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+        return TRUE;
+    }
+    case WM_CTLCOLORSTATIC: {
+        wchar_t cls[32]{};
+        GetClassNameW((HWND)lp, cls, (int)std::size(cls));
+        if (_wcsicmp(cls, L"Edit") == 0) {
+            static HBRUSH disabledEdit = CreateSolidBrush(RGB(0xEE, 0xEE, 0xF1));
+            SetBkColor((HDC)wp, RGB(0xEE, 0xEE, 0xF1));
+            SetTextColor((HDC)wp, kSecondary);
+            return (LRESULT)disabledEdit;
+        }
         SetBkMode((HDC)wp, TRANSPARENT);
-        return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
+        SetTextColor((HDC)wp, kText);
+        return (LRESULT)GetStockObject(NULL_BRUSH);
+    }
+    case WM_CTLCOLOREDIT: {
+        static HBRUSH editBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
+        SetBkColor((HDC)wp, RGB(0xFF, 0xFF, 0xFF));
+        SetTextColor((HDC)wp, kText);
+        return (LRESULT)editBrush;
+    }
+    case WM_CTLCOLORBTN:
+        SetBkMode((HDC)wp, TRANSPARENT);
+        SetTextColor((HDC)wp, kText);
+        return (LRESULT)GetStockObject(NULL_BRUSH);
+    case WM_CTLCOLORLISTBOX:
+        SetBkColor((HDC)wp, kNavBg);
+        SetTextColor((HDC)wp, kText);
+        {
+            static HBRUSH navBrush = CreateSolidBrush(kNavBg);
+            return (LRESULT)navBrush;
+        }
     case WM_ERASEBKGND: {
         RECT rc{};
         GetClientRect(hwnd, &rc);
-        FillRect((HDC)wp, &rc, GetSysColorBrush(COLOR_WINDOW));
+        HBRUSH page = CreateSolidBrush(kPageBg);
+        FillRect((HDC)wp, &rc, page);
+        DeleteObject(page);
+        RECT nav{0, 0, px(184), rc.bottom};
+        HBRUSH navBrush = CreateSolidBrush(kNavBg);
+        FillRect((HDC)wp, &nav, navBrush);
+        DeleteObject(navBrush);
         return 1;
     }
     case WM_CLOSE:
@@ -643,6 +745,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_DESTROY:
         if (g.font) { DeleteObject(g.font); g.font = nullptr; }
         if (g.fontBold) { DeleteObject(g.fontBold); g.fontBold = nullptr; }
+        if (g.fontTitle) { DeleteObject(g.fontTitle); g.fontTitle = nullptr; }
         if (g.tabImages) { ImageList_Destroy(g.tabImages); g.tabImages = nullptr; }
         g.hwnd = nullptr;
         g.pages.clear();
@@ -680,7 +783,7 @@ void open(HWND appWindow) {
     (void)registered;
 
     g.dpi = GetDpiForSystem();
-    int w = px(680), h = px(500);
+    int w = px(820), h = px(560);
     RECT wr{0, 0, w, h};
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME), FALSE);
 
@@ -690,6 +793,8 @@ void open(HWND appWindow) {
                              wr.right - wr.left, wr.bottom - wr.top,
                              nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
     if (!g.hwnd) return;
+    BOOL dark = FALSE;
+    DwmSetWindowAttribute(g.hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 
     HICON smallIcon = (HICON)LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APPICON),
                                         IMAGE_ICON, px(16), px(16), LR_DEFAULTCOLOR | LR_SHARED);
@@ -705,24 +810,27 @@ void open(HWND appWindow) {
     bold.lfWeight = FW_SEMIBOLD;
     bold.lfHeight = MulDiv(bold.lfHeight, 5, 4);
     g.fontBold = CreateFontIndirectW(&bold);
+    LOGFONTW title = ncm.lfMessageFont;
+    title.lfWeight = FW_SEMIBOLD;
+    title.lfHeight = -MulDiv(20, (int)g.dpi, 72);
+    g.fontTitle = CreateFontIndirectW(&title);
 
     g.loading = true;
 
-    // Tab 控件
-    HWND tab = CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
-                               0, 0, w, h, g.hwnd, (HMENU)kTab, GetModuleHandleW(nullptr), nullptr);
+    // Windows 11-style left navigation.
+    HWND tab = CreateWindowExW(0, L"LISTBOX", L"",
+                               WS_CHILD | WS_VISIBLE | WS_TABSTOP | LBS_NOTIFY |
+                                   LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT,
+                               0, px(14), px(184), h - px(28), g.hwnd,
+                               (HMENU)kTab, GetModuleHandleW(nullptr), nullptr);
     SendMessageW(tab, WM_SETFONT, (WPARAM)g.font, TRUE);
-    g.tabImages = createTabImages();
-    TabCtrl_SetImageList(tab, g.tabImages);
-    TabCtrl_SetPadding(tab, px(8), px(5));
-    const wchar_t* names[] = {L"General", L"Backend", L"Language", L"Shortcuts",
-                              L"Behavior", L"Skip Apps", L"About"};
+    SendMessageW(tab, LB_SETITEMHEIGHT, 0, px(42));
+    const wchar_t* names[] = {L"General", L"Translation", L"Languages", L"Shortcuts",
+                              L"Behavior", L"Excluded apps", L"About"};
     for (int i = 0; i < 7; ++i) {
-        TCITEMW item{TCIF_TEXT | TCIF_IMAGE};
-        item.pszText = (LPWSTR)names[i];
-        item.iImage = i;
-        TabCtrl_InsertItem(tab, i, &item);
+        SendMessageW(tab, LB_ADDSTRING, 0, (LPARAM)names[i]);
     }
+    SendMessageW(tab, LB_SETCURSEL, 0, 0);
 
     buildPages();
     showPage(0);

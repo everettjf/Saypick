@@ -25,11 +25,14 @@ public:
     void close();
     bool isVisible() const { return hwnd_ != nullptr; }
     const std::wstring& translation() const { return translation_; }
+    Language target() const { return target_; }
 
     /// 点击 Replace（App 负责关弹窗 + 替换）
     std::function<void()> onReplace;
     /// 弹窗里改选目标语言
     std::function<void(Language)> onRetarget;
+    /// 错误状态下重试当前请求
+    std::function<void()> onRetry;
     /// 弹窗关闭（App 取消未完成的流）
     std::function<void()> onClosed;
 
@@ -38,7 +41,7 @@ private:
     static LRESULT CALLBACK wndProc(HWND, UINT, WPARAM, LPARAM);
     LRESULT handle(UINT msg, WPARAM wp, LPARAM lp);
 
-    enum class Region { None, Close, Lang, Copy, Replace };
+    enum class Region { None, Close, Lang, Copy, Replace, Retry };
 
     void layoutAndResize();
     void paint(HDC dc);
@@ -61,12 +64,16 @@ private:
     bool loading_ = true;
     Language target_ = Language::English;
     bool copiedFlash_ = false;
+    int width_ = 420;
+    int textHeight_ = 0;
+    int viewportHeight_ = 0;
+    int scrollY_ = 0;
 
     Region hover_ = Region::None;
     bool trackingMouse_ = false;
     bool menuOpen_ = false;
 
-    RECT rcClose_{}, rcLang_{}, rcCopy_{}, rcReplace_{};
+    RECT rcClose_{}, rcLang_{}, rcCopy_{}, rcReplace_{}, rcRetry_{};
     HFONT fontHeader_ = nullptr, fontBody_ = nullptr, fontSmall_ = nullptr;
 
     int mouseHookId_ = 0, keyHookId_ = 0;
