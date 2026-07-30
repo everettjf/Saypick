@@ -55,7 +55,8 @@ final class TriggerController {
         guard mode != .none else { return }
 
         SelectionMonitor.shared.onSelection = { [weak self] text, location, element, range in
-            guard let self, AppSettings.isEnabled, AccessibilityPermission.isGranted else { return }
+            guard let self, AppSettings.isEnabled, AccessibilityPermission.isGranted,
+                  !AppSettings.shouldSkipFrontmostApplication() else { return }
             switch mode {
             case .none:
                 break
@@ -75,7 +76,8 @@ final class TriggerController {
     // MARK: - 读·划词翻译
 
     func handleRead() {
-        guard AppSettings.isEnabled, AccessibilityPermission.isGranted else { return }
+        guard AppSettings.isEnabled, AccessibilityPermission.isGranted,
+              !AppSettings.shouldSkipFrontmostApplication() else { return }
         Task { @MainActor in
             guard let cap = await SelectionCapture.readSelection() else { return }
             presentRead(text: cap.text, element: cap.element, range: cap.range)
@@ -135,6 +137,10 @@ final class TriggerController {
     private func runTranslationStream(text: String, from: Language?, to: Language,
                                       style: RewriteStyle, into model: TranslationPopupModel) {
         streamTask?.cancel()
+        model.onRetry = { [weak self, weak model] in
+            guard let self, let model else { return }
+            self.runTranslationStream(text: text, from: from, to: to, style: style, into: model)
+        }
         model.translation = ""
         model.isLoading = true
         model.errorText = nil
@@ -159,7 +165,8 @@ final class TriggerController {
     // MARK: - 写·输入改写
 
     func handleRewrite() {
-        guard AppSettings.isEnabled, AccessibilityPermission.isGranted else { return }
+        guard AppSettings.isEnabled, AccessibilityPermission.isGranted,
+              !AppSettings.shouldSkipFrontmostApplication() else { return }
         rewriteTask?.cancel()
         rewriteTask = Task { @MainActor in
             guard let cap = await SelectionCapture.captureForRewrite() else { return }

@@ -10,7 +10,7 @@ import SwiftUI
 import Ollama
 
 struct SkipAppsSettingsView: View {
-    @AppStorage("appSkipList") private var appSkipListString = ""
+    @AppStorage(AppSettings.Keys.skipApps) private var appSkipListString = ""
     @State private var newAppName = ""
 
     var appSkipList: [String] {

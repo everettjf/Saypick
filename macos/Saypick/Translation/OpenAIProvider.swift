@@ -32,8 +32,17 @@ struct OpenAIProvider: TranslationProvider {
                     continuation.finish(throwing: TranslationError.notConfigured("Missing OpenAI API key"))
                     return
                 }
+                guard !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    continuation.finish(throwing: TranslationError.notConfigured("Missing OpenAI-compatible base URL"))
+                    return
+                }
                 guard let url = URL(string: baseURL.trimmingTrailingSlash + "/chat/completions") else {
                     continuation.finish(throwing: TranslationError.notConfigured("Invalid base URL"))
+                    return
+                }
+                guard url.scheme?.lowercased() == "https" || isLoopback(url.host) else {
+                    continuation.finish(throwing: TranslationError.notConfigured(
+                        "Refusing to send an API key over an insecure HTTP connection"))
                     return
                 }
 
@@ -56,7 +65,14 @@ struct OpenAIProvider: TranslationProvider {
                 do {
                     let (bytes, response) = try await URLSession.shared.bytes(for: req)
                     if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                        continuation.finish(throwing: TranslationError.network("HTTP \(http.statusCode)"))
+                        var responseBody = ""
+                        for try await line in bytes.lines {
+                            responseBody += line
+                            if responseBody.count >= 16_384 { break }
+                        }
+                        let detail = providerError(from: responseBody)
+                        let message = detail.map { "HTTP \(http.statusCode): \($0)" } ?? "HTTP \(http.statusCode)"
+                        continuation.finish(throwing: TranslationError.network(message))
                         return
                     }
                     for try await line in bytes.lines {
@@ -79,6 +95,24 @@ struct OpenAIProvider: TranslationProvider {
             continuation.onTermination = { _ in task.cancel() }
         }
     }
+}
+
+private func isLoopback(_ host: String?) -> Bool {
+    guard let host = host?.lowercased() else { return false }
+    return host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]"
+}
+
+private func providerError(from body: String) -> String? {
+    guard let data = body.data(using: .utf8),
+          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : String(trimmed.prefix(500))
+    }
+    if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
+        return message
+    }
+    if let error = json["error"] as? String { return error }
+    return json["message"] as? String
 }
 
 private extension String {

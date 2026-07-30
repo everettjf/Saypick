@@ -5,7 +5,7 @@
 //  统一配置入口（替代散落的 UserDefaults 读写）。
 //
 
-import Foundation
+import AppKit
 
 /// 翻译后端
 enum TranslationBackend: String, CaseIterable, Identifiable {
@@ -92,6 +92,7 @@ enum AppSettings {
         static let rewritePreview = "rewritePreview"
         static let rewriteStyle = "rewriteStyle"
         static let readStyle = "readStyle"
+        static let skipApps = "appSkipList"
     }
 
     private static let d = UserDefaults.standard
@@ -164,6 +165,29 @@ enum AppSettings {
     static var readStyle: RewriteStyle {
         get { RewriteStyle(rawValue: d.string(forKey: Keys.readStyle) ?? "") ?? .faithful }
         set { d.set(newValue.rawValue, forKey: Keys.readStyle) }
+    }
+
+    /// 跳过列表兼容现有逗号分隔存储；匹配应用名、bundle id 或 .app 名称。
+    static var skipApps: [String] {
+        d.string(forKey: Keys.skipApps)?
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty } ?? []
+    }
+
+    static func shouldSkipFrontmostApplication() -> Bool {
+        guard !skipApps.isEmpty, let app = NSWorkspace.shared.frontmostApplication else { return false }
+        let candidates = [
+            app.localizedName,
+            app.bundleIdentifier,
+            app.bundleURL?.deletingPathExtension().lastPathComponent
+        ].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+
+        return skipApps.contains { entry in
+            var normalized = entry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if normalized.hasSuffix(".app") { normalized.removeLast(4) }
+            return candidates.contains(normalized)
+        }
     }
 
     private static func shortcut(forKey key: String) -> KeyboardShortcutPreference? {

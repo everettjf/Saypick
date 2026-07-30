@@ -24,6 +24,8 @@ final class TranslationPopupModel: ObservableObject {
     var onReplace: (() -> Void)?
     /// 用户在弹窗里改选目标语言时回调（按新目标重新翻译）
     var onRetarget: ((Language) -> Void)?
+    /// 翻译失败后重试当前请求
+    var onRetry: (() -> Void)?
 
     init(original: String, target: Language) {
         self.original = original
@@ -106,10 +108,25 @@ struct TranslationPopupView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let err = model.errorText {
-                Label(err, systemImage: "exclamationmark.triangle.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 10) {
+                    Label(err, systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if model.onRetry != nil {
+                        HStack {
+                            Spacer()
+                            Button {
+                                model.onRetry?()
+                            } label: {
+                                Label("Retry", systemImage: "arrow.clockwise")
+                                    .font(.system(size: 12))
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                    }
+                }
             } else if model.translation.isEmpty && model.isLoading {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
