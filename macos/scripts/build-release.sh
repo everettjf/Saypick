@@ -4,6 +4,9 @@
 # 完整的构建、签名、公证、打包流程
 #
 # 使用方法:
+#   export APPLE_ID="you@example.com"
+#   export APPLE_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+#   export APPLE_TEAM_ID="ABC1234567"
 #   ./scripts/build-release.sh
 #
 # 注意: 版本号会自动从 project.pbxproj 读取
@@ -68,26 +71,27 @@ APP_PATH="$EXPORT_DIR/$APP_NAME.app"
 info "Building Saypick version $VERSION (build $BUILD_NUMBER)"
 info "Project root: $PROJECT_ROOT"
 
-# 加载环境变量
-if [ -f "$PROJECT_ROOT/.env" ]; then
-    source "$PROJECT_ROOT/.env"
-    success "Loaded configuration from .env"
-else
-    error "Configuration file .env not found!\nPlease copy .env.template to .env and fill in your credentials."
+# 发布凭据只从调用方导出的环境变量读取，不加载仓库内的密钥文件。
+if [ -z "${APPLE_ID:-}" ]; then
+    error "APPLE_ID is not exported"
 fi
 
-# 检查必要的环境变量
+if [ -z "${APPLE_SPECIFIC_PASSWORD:-}" ]; then
+    error "APPLE_SPECIFIC_PASSWORD is not exported"
+fi
+
+if [ -z "${APPLE_TEAM_ID:-}" ]; then
+    error "APPLE_TEAM_ID is not exported"
+fi
+
+# 按 Team ID 自动选择 Developer ID Application 证书，避免额外的证书名配置。
+DEVELOPER_ID_APPLICATION="$(security find-identity -v -p codesigning |
+    sed -n "s/.*\"\\(Developer ID Application:.*(${APPLE_TEAM_ID})\\)\".*/\\1/p" |
+    head -1)"
 if [ -z "$DEVELOPER_ID_APPLICATION" ]; then
-    error "DEVELOPER_ID_APPLICATION not set in .env"
+    error "No valid Developer ID Application certificate found for team $APPLE_TEAM_ID"
 fi
-
-if [ -z "$APPLE_ID" ]; then
-    error "APPLE_ID not set in .env"
-fi
-
-if [ -z "$TEAM_ID" ]; then
-    error "TEAM_ID not set in .env"
-fi
+success "Using signing identity: $DEVELOPER_ID_APPLICATION"
 
 # 步骤 1: 清理旧的构建文件
 info "Step 1/6: Cleaning build directory..."
@@ -181,8 +185,8 @@ info "Uploading to Apple for notarization (this may take a few minutes)..."
 
 NOTARIZE_OUTPUT=$(xcrun notarytool submit "$DMG_PATH" \
     --apple-id "$APPLE_ID" \
-    --team-id "$TEAM_ID" \
-    --password "$APPLE_APP_PASSWORD" \
+    --team-id "$APPLE_TEAM_ID" \
+    --password "$APPLE_SPECIFIC_PASSWORD" \
     --wait 2>&1)
 
 echo "$NOTARIZE_OUTPUT"

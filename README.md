@@ -151,8 +151,8 @@ macOS:
 cd macos
 open Saypick.xcodeproj          # ⌘R to run
 
-# Signed release + notarized DMG (configure .env from .env.template first)
-./scripts/build-release.sh      # → build/Saypick.dmg
+# Signed release + notarized DMG (export APPLE_ID, APPLE_SPECIFIC_PASSWORD, APPLE_TEAM_ID first)
+./scripts/build-release.sh      # → build/Saypick-x.y.z.dmg
 ```
 
 Requirements: macOS 26+, Xcode 15+. The app is **not** sandboxed (it needs Accessibility + synthetic key events). For local dev builds, sign with your Apple Development team so the Accessibility grant persists across rebuilds.

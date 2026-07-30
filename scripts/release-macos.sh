@@ -7,7 +7,7 @@
 #
 # 前置：
 #   - gh 已登录（gh auth login）
-#   - macos/.env 已按 .env.template 配好（签名 + 公证）
+#   - 已导出 APPLE_ID、APPLE_SPECIFIC_PASSWORD、APPLE_TEAM_ID
 set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,10 +28,9 @@ fi
 cd "$ROOT/macos"
 ./scripts/build-release.sh
 
-DMG="$ROOT/macos/build/Saypick.dmg"
+DMG="$ROOT/macos/build/Saypick-$VERSION.dmg"
 [ -f "$DMG" ] || { echo "DMG not produced at $DMG" >&2; exit 1; }
 NAMED_DMG="$ROOT/macos/build/Saypick-$VERSION.dmg"
-cp -f "$DMG" "$NAMED_DMG"
 
 # release 不存在则创建
 if ! gh release view "$TAG" --repo everettjf/Saypick >/dev/null 2>&1; then

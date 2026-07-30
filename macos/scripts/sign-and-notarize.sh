@@ -4,6 +4,9 @@
 # 单独对已有的 .app 或 .dmg 进行签名和公证
 #
 # 使用方法:
+#   export APPLE_ID="you@example.com"
+#   export APPLE_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+#   export APPLE_TEAM_ID="ABC1234567"
 #   ./scripts/sign-and-notarize.sh /path/to/Saypick.app
 #   ./scripts/sign-and-notarize.sh /path/to/Saypick.dmg
 #
@@ -28,7 +31,6 @@ if [ $# -eq 0 ]; then
 fi
 
 TARGET_PATH="$1"
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # 检查文件是否存在
 if [ ! -e "$TARGET_PATH" ]; then
@@ -46,26 +48,26 @@ else
     error "Unsupported file type. Please provide .app or .dmg"
 fi
 
-# 加载环境变量
-if [ -f "$PROJECT_ROOT/.env" ]; then
-    source "$PROJECT_ROOT/.env"
-    success "Loaded configuration"
-else
-    error ".env file not found"
+# 发布凭据只从调用方导出的环境变量读取，不加载仓库内的密钥文件。
+if [ -z "${APPLE_ID:-}" ]; then
+    error "APPLE_ID is not exported"
 fi
 
-# 检查必要的环境变量
+if [ -z "${APPLE_SPECIFIC_PASSWORD:-}" ]; then
+    error "APPLE_SPECIFIC_PASSWORD is not exported"
+fi
+
+if [ -z "${APPLE_TEAM_ID:-}" ]; then
+    error "APPLE_TEAM_ID is not exported"
+fi
+
+DEVELOPER_ID_APPLICATION="$(security find-identity -v -p codesigning |
+    sed -n "s/.*\"\\(Developer ID Application:.*(${APPLE_TEAM_ID})\\)\".*/\\1/p" |
+    head -1)"
 if [ -z "$DEVELOPER_ID_APPLICATION" ]; then
-    error "DEVELOPER_ID_APPLICATION not set in .env"
+    error "No valid Developer ID Application certificate found for team $APPLE_TEAM_ID"
 fi
-
-if [ -z "$APPLE_ID" ]; then
-    error "APPLE_ID not set in .env"
-fi
-
-if [ -z "$TEAM_ID" ]; then
-    error "TEAM_ID not set in .env"
-fi
+success "Using signing identity: $DEVELOPER_ID_APPLICATION"
 
 # 如果是 .app，先签名
 if [ "$FILE_TYPE" == "app" ]; then
@@ -120,8 +122,8 @@ info "Uploading to Apple (this may take several minutes)..."
 
 NOTARIZE_OUTPUT=$(xcrun notarytool submit "$TARGET_PATH" \
     --apple-id "$APPLE_ID" \
-    --team-id "$TEAM_ID" \
-    --password "$APPLE_APP_PASSWORD" \
+    --team-id "$APPLE_TEAM_ID" \
+    --password "$APPLE_SPECIFIC_PASSWORD" \
     --wait 2>&1)
 
 echo "$NOTARIZE_OUTPUT"

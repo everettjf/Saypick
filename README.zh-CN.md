@@ -149,8 +149,8 @@ macOS：
 cd macos
 open Saypick.xcodeproj          # ⌘R 运行
 
-# 签名发布 + 公证 DMG（先按 .env.template 配置 .env）
-./scripts/build-release.sh      # → build/Saypick.dmg
+# 签名发布 + 公证 DMG（先导出 APPLE_ID、APPLE_SPECIFIC_PASSWORD、APPLE_TEAM_ID）
+./scripts/build-release.sh      # → build/Saypick-x.y.z.dmg
 ```
 
 要求：macOS 26+、Xcode 15+。应用**未**沙盒化（需要辅助功能权限 + 合成键盘事件）。本地开发构建请用你的 Apple Development 团队签名，这样辅助功能授权在重新构建后依然有效。
