@@ -7,7 +7,6 @@
 
 
 import SwiftUI
-import Ollama
 
 struct LanguageSettingsView: View {
     @State private var selectedLanguage = LanguageConfig.sourceLanguage
@@ -92,51 +91,6 @@ struct LanguageSettingsView: View {
             } header: {
                 SettingsSectionHeader(symbol: "arrow.left.arrow.right.circle.fill", color: .orange,
                                       title: "Translation Direction", subtitle: "Per shortcut · auto or fixed")
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "1.circle.fill")
-                            .foregroundColor(.blue)
-                            .font(.title3)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Select")
-                                .font(.callout.weight(.semibold))
-                            Text("Select text in any app, then trigger Saypick by shortcut, the floating icon, or auto-translate on selection")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "2.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.title3)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Translate")
-                                .font(.callout.weight(.semibold))
-                            Text("Saypick translates it to \(selectedTargetLanguage.displayName) using your selected AI model")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "3.circle.fill")
-                            .foregroundColor(.purple)
-                            .font(.title3)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Read or rewrite")
-                                .font(.callout.weight(.semibold))
-                            Text("See the translation in a popup, or rewrite your own text in place ready to send")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-            } header: {
-                SettingsSectionHeader(symbol: "sparkles", color: .pink, title: "How It Works")
             }
 
         }

@@ -10,7 +10,6 @@ enum PreferencesSection: String, CaseIterable, Identifiable {
     case behavior = "Behavior"
     case backend = "Backend"
     case language = "Language"
-    case models = "Ollama Models"
     case shortcuts = "Shortcuts"
     case skipApps = "Skip Apps"
     case about = "About"
@@ -23,7 +22,6 @@ enum PreferencesSection: String, CaseIterable, Identifiable {
         case .behavior: return "wand.and.stars"
         case .backend: return "server.rack"
         case .language: return "globe"
-        case .models: return "cpu"
         case .shortcuts: return "keyboard.fill"
         case .skipApps: return "nosign"
         case .about: return "info.circle.fill"
@@ -37,7 +35,6 @@ enum PreferencesSection: String, CaseIterable, Identifiable {
         case .behavior: return .purple
         case .backend: return .teal
         case .language: return .green
-        case .models: return .orange
         case .shortcuts: return .pink
         case .skipApps: return .red
         case .about: return .gray

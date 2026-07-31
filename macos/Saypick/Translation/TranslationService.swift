@@ -12,7 +12,15 @@ final class TranslationService {
     static let shared = TranslationService()
     private init() {}
 
+#if DEBUG
+    /// XCTest seam used to keep network behavior deterministic.
+    var providerOverride: TranslationProvider?
+#endif
+
     private func currentProvider() -> TranslationProvider {
+#if DEBUG
+        if let providerOverride { return providerOverride }
+#endif
         switch AppSettings.backend {
         case .ollama: return OllamaProvider()
         case .openai: return OpenAIProvider()

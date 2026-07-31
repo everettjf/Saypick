@@ -10,12 +10,14 @@ import Foundation
 final class TranslationCache {
     static let shared = TranslationCache()
 
-    private let capacity = 200
+    private let capacity: Int
     private var store: [String: String] = [:]
     private var order: [String] = []
     private let lock = NSLock()
 
-    private init() {}
+    init(capacity: Int = 200) {
+        self.capacity = max(1, capacity)
+    }
 
     func key(backend: String, from: Language?, to: Language, text: String) -> String {
         "\(backend)|\(from?.rawValue ?? "auto")|\(to.rawValue)|\(text)"

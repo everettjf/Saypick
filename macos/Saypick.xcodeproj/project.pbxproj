@@ -14,7 +14,14 @@
 
 /* Begin PBXFileReference section */
 		5ACBDEF62E8A12F400DD7984 /* Saypick.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Saypick.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A0000010000000000000001 /* SaypickTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SaypickTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A0000010000000000000002 /* SaypickE2ETests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SaypickE2ETests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXContainerItemProxy section */
+		7A0000010000000000000003 /* PBXContainerItemProxy */ = {isa = PBXContainerItemProxy; containerPortal = 5ACBDEEE2E8A12F400DD7984 /* Project object */; proxyType = 1; remoteGlobalIDString = 5ACBDEF52E8A12F400DD7984; remoteInfo = Saypick; };
+		7A0000010000000000000004 /* PBXContainerItemProxy */ = {isa = PBXContainerItemProxy; containerPortal = 5ACBDEEE2E8A12F400DD7984 /* Project object */; proxyType = 1; remoteGlobalIDString = 5ACBDEF52E8A12F400DD7984; remoteInfo = Saypick; };
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		5A86A7612E98D18500CA8E22 /* Exceptions for "Saypick" folder in "Saypick" target */ = {
@@ -35,9 +42,13 @@
 			path = Saypick;
 			sourceTree = "<group>";
 		};
+		7A0000010000000000000005 /* SaypickTests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = SaypickTests; sourceTree = "<group>"; };
+		7A0000010000000000000006 /* SaypickE2ETests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = SaypickE2ETests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7A0000010000000000000007 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		7A0000010000000000000008 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		5ACBDEF32E8A12F400DD7984 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -55,6 +66,8 @@
 			isa = PBXGroup;
 			children = (
 				5ACBDEF82E8A12F400DD7984 /* Saypick */,
+				7A0000010000000000000005 /* SaypickTests */,
+				7A0000010000000000000006 /* SaypickE2ETests */,
 				5ACBDEF72E8A12F400DD7984 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -63,6 +76,8 @@
 			isa = PBXGroup;
 			children = (
 				5ACBDEF62E8A12F400DD7984 /* Saypick.app */,
+				7A0000010000000000000001 /* SaypickTests.xctest */,
+				7A0000010000000000000002 /* SaypickE2ETests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +85,32 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		7A0000010000000000000009 /* SaypickTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A0000010000000000000010 /* Build configuration list for PBXNativeTarget "SaypickTests" */;
+			buildPhases = (7A0000010000000000000011 /* Sources */, 7A0000010000000000000007 /* Frameworks */, 7A0000010000000000000012 /* Resources */);
+			buildRules = ();
+			dependencies = (7A0000010000000000000013 /* PBXTargetDependency */);
+			fileSystemSynchronizedGroups = (7A0000010000000000000005 /* SaypickTests */);
+			name = SaypickTests;
+			packageProductDependencies = ();
+			productName = SaypickTests;
+			productReference = 7A0000010000000000000001 /* SaypickTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7A0000010000000000000014 /* SaypickE2ETests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A0000010000000000000015 /* Build configuration list for PBXNativeTarget "SaypickE2ETests" */;
+			buildPhases = (7A0000010000000000000016 /* Sources */, 7A0000010000000000000008 /* Frameworks */, 7A0000010000000000000017 /* Resources */);
+			buildRules = ();
+			dependencies = (7A0000010000000000000018 /* PBXTargetDependency */);
+			fileSystemSynchronizedGroups = (7A0000010000000000000006 /* SaypickE2ETests */);
+			name = SaypickE2ETests;
+			packageProductDependencies = ();
+			productName = SaypickE2ETests;
+			productReference = 7A0000010000000000000002 /* SaypickE2ETests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		5ACBDEF52E8A12F400DD7984 /* Saypick */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5ACBDF012E8A12F500DD7984 /* Build configuration list for PBXNativeTarget "Saypick" */;
@@ -105,6 +146,8 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					7A0000010000000000000009 = { CreatedOnToolsVersion = 26.0; TestTargetID = 5ACBDEF52E8A12F400DD7984; };
+					7A0000010000000000000014 = { CreatedOnToolsVersion = 26.0; TestTargetID = 5ACBDEF52E8A12F400DD7984; };
 					5ACBDEF52E8A12F400DD7984 = {
 						CreatedOnToolsVersion = 26.0;
 					};
@@ -130,11 +173,15 @@
 			projectRoot = "";
 			targets = (
 				5ACBDEF52E8A12F400DD7984 /* Saypick */,
+				7A0000010000000000000009 /* SaypickTests */,
+				7A0000010000000000000014 /* SaypickE2ETests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		7A0000010000000000000012 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		7A0000010000000000000017 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		5ACBDEF42E8A12F400DD7984 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -145,6 +192,8 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7A0000010000000000000011 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		7A0000010000000000000016 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		5ACBDEF22E8A12F400DD7984 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -155,6 +204,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		7A0000010000000000000019 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = YPV49M8592; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 26.0; PRODUCT_BUNDLE_IDENTIFIER = com.xnu.saypick.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor; SWIFT_VERSION = 5.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Saypick.app/Contents/MacOS/Saypick"; }; name = Debug; };
+		7A0000010000000000000020 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = YPV49M8592; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 26.0; PRODUCT_BUNDLE_IDENTIFIER = com.xnu.saypick.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor; SWIFT_VERSION = 5.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Saypick.app/Contents/MacOS/Saypick"; }; name = Release; };
+		7A0000010000000000000021 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = YPV49M8592; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 26.0; PRODUCT_BUNDLE_IDENTIFIER = com.xnu.saypick.e2etests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor; SWIFT_VERSION = 5.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Saypick.app/Contents/MacOS/Saypick"; }; name = Debug; };
+		7A0000010000000000000022 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = YPV49M8592; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 26.0; PRODUCT_BUNDLE_IDENTIFIER = com.xnu.saypick.e2etests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor; SWIFT_VERSION = 5.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Saypick.app/Contents/MacOS/Saypick"; }; name = Release; };
 		5ACBDEFF2E8A12F500DD7984 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -303,7 +356,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.6;
+				MARKETING_VERSION = 0.1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.xnu.saypick;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -350,7 +403,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.6;
+				MARKETING_VERSION = 0.1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.xnu.saypick;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -372,6 +425,8 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7A0000010000000000000010 /* Build configuration list for PBXNativeTarget "SaypickTests" */ = {isa = XCConfigurationList; buildConfigurations = (7A0000010000000000000019 /* Debug */, 7A0000010000000000000020 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		7A0000010000000000000015 /* Build configuration list for PBXNativeTarget "SaypickE2ETests" */ = {isa = XCConfigurationList; buildConfigurations = (7A0000010000000000000021 /* Debug */, 7A0000010000000000000022 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		5ACBDEF12E8A12F400DD7984 /* Build configuration list for PBXProject "Saypick" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -391,6 +446,11 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin PBXTargetDependency section */
+		7A0000010000000000000013 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 5ACBDEF52E8A12F400DD7984 /* Saypick */; targetProxy = 7A0000010000000000000003 /* PBXContainerItemProxy */; };
+		7A0000010000000000000018 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 5ACBDEF52E8A12F400DD7984 /* Saypick */; targetProxy = 7A0000010000000000000004 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		5A84B6A72E9CCE7E00FEC14D /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {

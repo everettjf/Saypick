@@ -100,10 +100,10 @@ final class TriggerController {
             guard let self, let model else { return }
             model.targetLanguage = newTarget
             self.runTranslationStream(text: text, from: dir.from, to: newTarget,
-                                      style: AppSettings.readStyle, into: model)
+                                      style: .faithful, into: model)
         }
         runTranslationStream(text: text, from: dir.from, to: dir.to,
-                             style: AppSettings.readStyle, into: model)
+                             style: .faithful, into: model)
     }
 
     // MARK: - 方向决策与共用流式
@@ -168,7 +168,7 @@ final class TriggerController {
         guard AppSettings.isEnabled, AccessibilityPermission.isGranted,
               !AppSettings.shouldSkipFrontmostApplication() else { return }
         rewriteTask?.cancel()
-        rewriteTask = Task { @MainActor in
+        rewriteTask = Task { @MainActor [self] in
             guard let cap = await SelectionCapture.captureForRewrite() else { return }
             let style = AppSettings.rewriteStyle
             let dir = resolveDirection(text: cap.text, mode: AppSettings.rewriteDirection, isWrite: true)

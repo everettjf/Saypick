@@ -76,7 +76,7 @@ enum AppSettings {
         static let openAIModel = "openAIModel"
 
         // Ollama
-        static let ollamaModel = "selectedModel"   // 沿用旧 key，兼容 ModelsSettingsView
+        static let ollamaModel = "selectedModel"
 
         // 语言：sourceLanguage = 用户母语，targetLanguage = 外语（见 LanguageConfig）
         // 触发快捷键
@@ -91,7 +91,6 @@ enum AppSettings {
         static let selectionTrigger = "selectionTrigger"
         static let rewritePreview = "rewritePreview"
         static let rewriteStyle = "rewriteStyle"
-        static let readStyle = "readStyle"
         static let skipApps = "appSkipList"
     }
 
@@ -162,11 +161,6 @@ enum AppSettings {
         get { RewriteStyle(rawValue: d.string(forKey: Keys.rewriteStyle) ?? "") ?? .faithful }
         set { d.set(newValue.rawValue, forKey: Keys.rewriteStyle) }
     }
-    static var readStyle: RewriteStyle {
-        get { RewriteStyle(rawValue: d.string(forKey: Keys.readStyle) ?? "") ?? .faithful }
-        set { d.set(newValue.rawValue, forKey: Keys.readStyle) }
-    }
-
     /// 跳过列表兼容现有逗号分隔存储；匹配应用名、bundle id 或 .app 名称。
     static var skipApps: [String] {
         d.string(forKey: Keys.skipApps)?

@@ -26,14 +26,32 @@ jobs:
               -ArgumentList '--selftest' -NoNewWindow -Wait -PassThru
           exit $p.ExitCode
 
+      - name: Verify shared version metadata
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if (-not (Select-String -Quiet -Path windows/CMakeLists.txt -Pattern "project\(Saypick VERSION $([regex]::Escape($version)) ")) {
+            throw "windows/CMakeLists.txt does not match VERSION=$version"
+          }
+          [xml](Get-Content windows/src/Saypick.manifest -Raw) | Out-Null
+
   macos:
-    name: macOS build check
+    name: macOS unit + end-to-end tests
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build (unsigned)
+      - name: XCTest (unsigned)
         run: |
           xcodebuild -project Saypick.xcodeproj -scheme Saypick \
             -configuration Debug -destination 'platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY= build
+            -derivedDataPath "$RUNNER_TEMP/SaypickDerivedData" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY= test
+        working-directory: macos
+
+      - name: Static analysis
+        run: |
+          xcodebuild -project Saypick.xcodeproj -scheme Saypick \
+            -configuration Debug -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/SaypickDerivedData" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY= analyze
         working-directory: macos

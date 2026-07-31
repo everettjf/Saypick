@@ -25,6 +25,8 @@ struct SaypickApp: App {
         Settings {
             SettingsView()
         }
+        .windowToolbarStyle(.unifiedCompact)
+        .defaultSize(width: 780, height: 500)
     }
 }
 

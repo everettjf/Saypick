@@ -2,7 +2,7 @@
 //  SettingsView.swift
 //  Saypick
 //
-//  设置页面 - 使用 NavigationSplitView 架构
+//  设置页面 - 稳定的双栏布局，不让 NavigationSplitView 注入多余工具栏。
 //
 
 import SwiftUI
@@ -10,24 +10,23 @@ import SwiftUI
 // MARK: - Main Settings Window
 
 struct SettingsView: View {
-    @State private var selection: PreferencesSection? = .general
+    @State private var selection: PreferencesSection = .general
 
     var body: some View {
-        NavigationSplitView {
-            // Sidebar
-            List(PreferencesSection.allCases, selection: $selection) { section in
-                Label {
-                    Text(section.rawValue)
-                } icon: {
-                    IconBadge(symbol: section.icon, color: section.tint, size: 20)
+        HSplitView {
+            VStack(alignment: .leading, spacing: 0) {
+                List(PreferencesSection.allCases, selection: $selection) { section in
+                    Label {
+                        Text(section.rawValue)
+                    } icon: {
+                        IconBadge(symbol: section.icon, color: section.tint, size: 20)
+                    }
+                    .tag(section)
                 }
-                .tag(section)
+                .listStyle(.sidebar)
             }
-            .listStyle(.sidebar)
-            .navigationTitle("Saypick")
-            .frame(minWidth: 190)
-        } detail: {
-            // Detail content
+            .frame(minWidth: 180, idealWidth: 190, maxWidth: 220)
+
             switch selection {
             case .general:
                 GeneralSettingsView()
@@ -37,21 +36,15 @@ struct SettingsView: View {
                 BackendSettingsView()
             case .language:
                 LanguageSettingsView()
-            case .models:
-                ModelsSettingsView()
             case .shortcuts:
                 ShortcutsSettingsView()
             case .skipApps:
                 SkipAppsSettingsView()
             case .about:
                 AboutView()
-            case .none:
-                Text("Select a section from the sidebar")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
             }
         }
-        .frame(minWidth: 720, minHeight: 480)
+        .frame(minWidth: 720, minHeight: 460)
     }
 }
 

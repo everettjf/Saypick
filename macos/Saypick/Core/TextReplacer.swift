@@ -8,9 +8,21 @@
 import AppKit
 
 enum TextReplacer {
+#if DEBUG
+    /// XCTest seam for exercising the complete popup replacement flow without
+    /// requiring a CI runner to hold a macOS Accessibility grant.
+    @MainActor static var replacementOverride: ((String, Bool) async -> Void)?
+#endif
+
     /// 用译文替换。selectAll=true 时先 ⌘A 全选（整框改写），否则直接粘到当前选区。
     @MainActor
     static func replace(with text: String, selectAll: Bool) async {
+#if DEBUG
+        if let replacementOverride {
+            await replacementOverride(text, selectAll)
+            return
+        }
+#endif
         let pb = NSPasteboard.general
         let saved = PasteboardHelper.snapshot()
 

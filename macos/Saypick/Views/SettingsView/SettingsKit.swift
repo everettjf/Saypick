@@ -8,22 +8,21 @@
 
 import SwiftUI
 
-/// 彩色圆角图标徽标（System Settings 风格）
+/// Compact icon used consistently in the sidebar and setting rows.
 struct IconBadge: View {
     let symbol: String
     var color: Color = .blue
     var size: CGFloat = 22
 
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-            .fill(color.gradient)
+        RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
+            .fill(color)
             .frame(width: size, height: size)
             .overlay(
                 Image(systemName: symbol)
                     .font(.system(size: size * 0.54, weight: .semibold))
                     .foregroundStyle(.white)
             )
-            .shadow(color: color.opacity(0.3), radius: 1.5, y: 0.5)
     }
 }
 
@@ -35,8 +34,11 @@ struct SettingsSectionHeader: View {
     var subtitle: String? = nil
 
     var body: some View {
-        HStack(spacing: 10) {
-            IconBadge(symbol: symbol, color: color)
+        HStack(spacing: 8) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 18)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
@@ -50,7 +52,7 @@ struct SettingsSectionHeader: View {
             Spacer(minLength: 0)
         }
         .textCase(nil)          // 取消 grouped form 默认的全大写
-        .padding(.vertical, 2)
+        .padding(.vertical, 1)
     }
 }
 
@@ -92,6 +94,8 @@ extension View {
     func settingsPage(_ title: String) -> some View {
         self
             .formStyle(.grouped)
-            .navigationTitle(title)
+            .accessibilityLabel(title)
+            .frame(maxWidth: 640, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

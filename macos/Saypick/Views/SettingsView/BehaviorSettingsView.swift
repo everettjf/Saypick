@@ -11,7 +11,6 @@ struct BehaviorSettingsView: View {
     @AppStorage(AppSettings.Keys.selectionTrigger) private var selectionRaw = SelectionTrigger.none.rawValue
     @AppStorage(AppSettings.Keys.rewritePreview) private var rewritePreview = false
     @AppStorage(AppSettings.Keys.rewriteStyle) private var rewriteStyleRaw = RewriteStyle.faithful.rawValue
-    @AppStorage(AppSettings.Keys.readStyle) private var readStyleRaw = RewriteStyle.faithful.rawValue
 
     var body: some View {
         Form {
@@ -26,14 +25,9 @@ struct BehaviorSettingsView: View {
                 }
                 SettingsNote(text: "“Show floating icon” pops a small button next to your selection; “Auto-translate” shows the translation immediately. The shortcut always works regardless.")
 
-                Picker("Style", selection: $readStyleRaw) {
-                    ForEach(RewriteStyle.allCases) { s in
-                        Text(s.displayName).tag(s.rawValue)
-                    }
-                }
             } header: {
                 SettingsSectionHeader(symbol: "text.viewfinder", color: .blue,
-                                      title: "Read · translate", subtitle: "How ⌥D is triggered and styled")
+                                      title: "Selection translation", subtitle: "Choose what happens after selecting text")
             }
 
             Section {
@@ -51,7 +45,7 @@ struct BehaviorSettingsView: View {
                 }
             } header: {
                 SettingsSectionHeader(symbol: "pencil.and.outline", color: .purple,
-                                      title: "Rewrite", subtitle: "How ⌥R applies the result")
+                                      title: "Rewrite & replace", subtitle: "Control preview and writing style")
             }
         }
         .settingsPage("Behavior")
