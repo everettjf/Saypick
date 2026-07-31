@@ -97,11 +97,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await OllamaModelResolver.ensureValidDefault()
         }
 
-        // 首次请求辅助功能权限
-        if !AccessibilityPermission.isGranted {
-            AccessibilityPermission.request()
-        }
-
         // 首次启动：打开设置窗口，让用户立刻看到界面并完成配置
         if !UserDefaults.standard.bool(forKey: firstLaunchKey) {
             UserDefaults.standard.set(true, forKey: firstLaunchKey)
