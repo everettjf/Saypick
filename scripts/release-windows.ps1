@@ -27,20 +27,20 @@ $zip = Join-Path $root "windows\build\TypeTide-Windows-$version.zip"
 
 # release 不存在则创建
 $ErrorActionPreference = "Continue"
-gh release view $tag --repo everettjf/Saypick *> $null
+gh release view $tag --repo everettjf/TypeTide *> $null
 $exists = ($LASTEXITCODE -eq 0)
 if (-not $exists) {
     Write-Output "creating release $tag"
-    gh release create $tag --repo everettjf/Saypick --title "TypeTide $version" `
+    gh release create $tag --repo everettjf/TypeTide --title "TypeTide $version" `
         --notes "TypeTide $version — system-wide AI translation & inline rewrite.`n`n- Windows: download and run **TypeTide-Setup-$version.exe** (or use the portable zip)`n- macOS: download **TypeTide-$version.dmg** (uploaded separately if not yet present)" 2>&1 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
 } else {
     Write-Output "release $tag exists — uploading Windows assets to it"
 }
 
-gh release upload $tag $setup $zip --repo everettjf/Saypick --clobber 2>&1 | ForEach-Object { "$_" }
+gh release upload $tag $setup $zip --repo everettjf/TypeTide --clobber 2>&1 | ForEach-Object { "$_" }
 if ($LASTEXITCODE -ne 0) { throw "asset upload failed" }
 $ErrorActionPreference = "Stop"
 
 Write-Output ""
-Write-Output "released: https://github.com/everettjf/Saypick/releases/tag/$tag"
+Write-Output "released: https://github.com/everettjf/TypeTide/releases/tag/$tag"

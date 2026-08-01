@@ -11,7 +11,7 @@ import Combine
 
 
 // New releases
-// https://github.com/everettjf/Saypick
+// https://github.com/everettjf/TypeTide
 
 /// GitHub Release 响应结构
 struct GitHubRelease: Codable {

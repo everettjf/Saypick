@@ -187,8 +187,8 @@
     <a href="#use">How it works</a>
     <a href="#features">Features</a>
     <a href="#backends">Backends</a>
-    <a href="https://github.com/everettjf/Saypick/blob/main/docs/blog/introducing-typetide.md">Blog</a>
-    <a class="ghbtn" href="https://github.com/everettjf/Saypick">GitHub ↗</a>
+    <a href="https://github.com/everettjf/TypeTide/blob/main/docs/blog/introducing-typetide.md">Blog</a>
+    <a class="ghbtn" href="https://github.com/everettjf/TypeTide">GitHub ↗</a>
   </div>
 </nav>
 
@@ -206,10 +206,10 @@
 
     <div class="actions">
       <div class="cmd" id="brew">
-        <span><span class="pr">$</span> brew install --cask everettjf/saypick/typetide</span>
+        <span><span class="pr">$</span> brew install --cask everettjf/typetide/typetide</span>
         <button onclick="copyBrew()" id="copybtn">Copy</button>
       </div>
-      <a class="btn solid" href="https://github.com/everettjf/Saypick/releases">Download .dmg</a>
+      <a class="btn solid" href="https://github.com/everettjf/TypeTide/releases">Download .dmg</a>
     </div>
     <p class="meta"><b>macOS 26+</b> · Apple Silicon &amp; Intel · signed &amp; notarized · <b>MIT</b></p>
   </header>
@@ -299,29 +299,29 @@
     <h2>Translate in place.</h2>
     <p>Free, open source, and private. Set up in under two minutes.</p>
     <div class="cmd">
-      <span><span class="pr">$</span> brew install --cask everettjf/saypick/typetide</span>
+      <span><span class="pr">$</span> brew install --cask everettjf/typetide/typetide</span>
       <button onclick="copyBrew()">Copy</button>
     </div>
     <div class="actions">
-      <a class="btn solid" href="https://github.com/everettjf/Saypick/releases">Download .dmg</a>
-      <a class="btn line" href="https://github.com/everettjf/Saypick">★ Star on GitHub</a>
+      <a class="btn solid" href="https://github.com/everettjf/TypeTide/releases">Download .dmg</a>
+      <a class="btn line" href="https://github.com/everettjf/TypeTide">★ Star on GitHub</a>
     </div>
   </div>
 
   <footer>
     <div class="fb">TypeTide</div>
     <div class="fl">
-      <a href="https://github.com/everettjf/Saypick">GitHub</a>
-      <a href="https://github.com/everettjf/Saypick/blob/main/docs/blog/introducing-typetide.md">Blog</a>
+      <a href="https://github.com/everettjf/TypeTide">GitHub</a>
+      <a href="https://github.com/everettjf/TypeTide/blob/main/docs/blog/introducing-typetide.md">Blog</a>
       <a href="https://discord.com/invite/eGzEaP6TzR">Discord</a>
-      <a href="https://github.com/everettjf/Saypick/blob/main/LICENSE">MIT License</a>
+      <a href="https://github.com/everettjf/TypeTide/blob/main/LICENSE">MIT License</a>
     </div>
   </footer>
 </div>
 
 <script>
   function copyBrew(){
-    navigator.clipboard.writeText("brew install --cask everettjf/saypick/typetide");
+    navigator.clipboard.writeText("brew install --cask everettjf/typetide/typetide");
     document.querySelectorAll('.cmd button').forEach(b=>{const t=b.textContent;b.textContent="Copied ✓";setTimeout(()=>b.textContent=t,1400)});
   }
   const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});

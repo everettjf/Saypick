@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://everettjf.github.io/Saypick/">🌐 Website</a> ·
+  <a href="https://everettjf.github.io/TypeTide/">🌐 Website</a> ·
   <a href="docs/blog/introducing-typetide.md">📝 Read the intro</a> ·
   <b>English</b> · <a href="README.zh-CN.md">简体中文</a>
 </p>
@@ -87,7 +87,7 @@ TypeTide lists your installed models in **Settings → Backend** and auto-picks 
 
 macOS — with [Homebrew](https://brew.sh) (recommended):
 ```bash
-brew install --cask everettjf/saypick/typetide
+brew install --cask everettjf/typetide/typetide
 ```
 …or download the latest `.dmg` from [Releases](../../releases), drag it to Applications, and launch it. The build is signed and notarized by Apple.
 

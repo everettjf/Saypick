@@ -33,9 +33,9 @@ DMG="$ROOT/macos/build/TypeTide-$VERSION.dmg"
 NAMED_DMG="$ROOT/macos/build/TypeTide-$VERSION.dmg"
 
 # release 不存在则创建
-if ! gh release view "$TAG" --repo everettjf/Saypick >/dev/null 2>&1; then
+if ! gh release view "$TAG" --repo everettjf/TypeTide >/dev/null 2>&1; then
     echo "creating release $TAG"
-    gh release create "$TAG" --repo everettjf/Saypick --title "TypeTide $VERSION" \
+    gh release create "$TAG" --repo everettjf/TypeTide --title "TypeTide $VERSION" \
         --notes "TypeTide $VERSION — system-wide AI translation & inline rewrite.
 
 - macOS: download **TypeTide-$VERSION.dmg**
@@ -44,7 +44,7 @@ else
     echo "release $TAG exists — uploading macOS asset to it"
 fi
 
-gh release upload "$TAG" "$NAMED_DMG" --repo everettjf/Saypick --clobber
+gh release upload "$TAG" "$NAMED_DMG" --repo everettjf/TypeTide --clobber
 
 echo
-echo "released: https://github.com/everettjf/Saypick/releases/tag/$TAG"
+echo "released: https://github.com/everettjf/TypeTide/releases/tag/$TAG"

@@ -96,7 +96,7 @@ Release per platform, either order, onto the same `vX.Y.Z` tag:
   `macos/scripts/build-release.sh`, then create-if-missing + upload
   `TypeTide-X.Y.Z.dmg`.
 Both need `gh auth login` once. `UpdateChecker` (both apps) reads
-`releases/latest` at `everettjf/Saypick`.
+`releases/latest` at `everettjf/TypeTide`.
 
 Keep `README.md` free of the app's release version — link to `../../releases`,
 refer to artifacts as `TypeTide-Setup-x.y.z.exe` / `build/TypeTide.dmg` style,

@@ -477,8 +477,8 @@ void buildPages() {
                   L"Private local models or secure OpenAI-compatible cloud APIs.",
                   x, y + 28, w, kAboutDesc),
         make(L"SysLink",
-             L"<a href=\"https://github.com/everettjf/Saypick\">GitHub</a>   ·   "
-             L"<a href=\"https://everettjf.github.io/Saypick/\">Website</a>   ·   "
+             L"<a href=\"https://github.com/everettjf/TypeTide\">GitHub</a>   ·   "
+             L"<a href=\"https://everettjf.github.io/TypeTide/\">Website</a>   ·   "
              L"<a href=\"https://discord.com/invite/eGzEaP6TzR\">Discord</a>",
              WS_TABSTOP, x, y + 84, w, 22, kAboutLinks),
     };

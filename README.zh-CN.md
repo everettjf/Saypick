@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://everettjf.github.io/Saypick/">🌐 官网</a> ·
+  <a href="https://everettjf.github.io/TypeTide/">🌐 官网</a> ·
   <a href="docs/blog/introducing-typetide.md">📝 项目介绍</a> ·
   <a href="README.md">English</a> · <b>简体中文</b>
 </p>
@@ -85,7 +85,7 @@ TypeTide 会在**设置 → Backend** 里列出你已安装的模型；配置的
 
 macOS——推荐用 [Homebrew](https://brew.sh)：
 ```bash
-brew install --cask everettjf/saypick/typetide
+brew install --cask everettjf/typetide/typetide
 ```
 ……或者从 [Releases](../../releases) 下载最新 `.dmg`，拖进「应用程序」后启动。安装包已由 Apple 签名和公证。
 
