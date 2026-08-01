@@ -361,7 +361,7 @@ void PopupWindow::paint(HDC dc) {
     if (tideActive && clipText.right > clipText.left) {
         saved = SaveDC(dc);
         IntersectClipRect(dc, clipText.left, clipText.top, clipText.right, clipText.bottom);
-        const int span = std::max(1, clipText.right - clipText.left + px(90));
+        const int span = std::max(1, static_cast<int>(clipText.right - clipText.left) + px(90));
         const unsigned speed = tidePhase_ == TidePhase::Settling ? 11u : 4u;
         const int frontier = clipText.left - px(22) + (int)((tideTick_ * speed) % (unsigned)span);
         HPEN oldPen = (HPEN)SelectObject(dc, GetStockObject(NULL_PEN));
@@ -370,7 +370,7 @@ void PopupWindow::paint(HDC dc) {
             const int trail = i / 7;
             const int x = frontier - px(trail * 13) - px((row % 2) * 4);
             const double wave = std::sin((double)tideTick_ * 0.14 + i * 0.72) * px(5);
-            const int y = clipText.top + row * std::max(1, (clipText.bottom - clipText.top - px(5)) / 6)
+            const int y = clipText.top + row * std::max(1, static_cast<int>(clipText.bottom - clipText.top - px(5)) / 6)
                           + (int)wave;
             const int radius = px(1 + ((i * 7) % 3));
             COLORREF color = (i % 3 == 0)
