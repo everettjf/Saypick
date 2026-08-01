@@ -39,7 +39,7 @@ private struct MenuBarIconLabel: View {
         Image(nsImage: BrandIcon.templateImage)
             .resizable()
             .scaledToFit()
-            .frame(width: 16, height: 16)
+            .frame(width: 13, height: 13)
             .onAppear { SettingsOpener.handler = { openSettings() } }
     }
 }
