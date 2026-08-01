@@ -7,8 +7,8 @@
 #   export APPLE_ID="you@example.com"
 #   export APPLE_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
 #   export APPLE_TEAM_ID="ABC1234567"
-#   ./scripts/sign-and-notarize.sh /path/to/Saypick.app
-#   ./scripts/sign-and-notarize.sh /path/to/Saypick.dmg
+#   ./scripts/sign-and-notarize.sh /path/to/TypeTide.app
+#   ./scripts/sign-and-notarize.sh /path/to/TypeTide.dmg
 #
 
 set -e
@@ -27,7 +27,7 @@ warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
 
 # 检查参数
 if [ $# -eq 0 ]; then
-    error "Usage: $0 <path-to-app-or-dmg>\nExample: $0 build/export/Saypick.app"
+    error "Usage: $0 <path-to-app-or-dmg>\nExample: $0 build/export/TypeTide.app"
 fi
 
 TARGET_PATH="$1"
@@ -98,7 +98,7 @@ if [ "$FILE_TYPE" == "app" ]; then
         fi
 
         create-dmg \
-            --volname "Saypick" \
+            --volname "TypeTide" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 100 \

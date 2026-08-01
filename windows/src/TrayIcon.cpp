@@ -24,7 +24,7 @@ void TrayIcon::add(HWND owner, UINT callbackMessage) {
                                    IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
                                    GetSystemMetrics(SM_CYSMICON), 0);
     if (!nid_.hIcon) nid_.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
-    wcscpy_s(nid_.szTip, L"Saypick");
+    wcscpy_s(nid_.szTip, L"TypeTide");
     added_ = Shell_NotifyIconW(NIM_ADD, &nid_);
     nid_.uVersion = NOTIFYICON_VERSION_4;
     Shell_NotifyIconW(NIM_SETVERSION, &nid_);
@@ -47,7 +47,7 @@ void TrayIcon::showMenu(HWND owner) {
     }
 
     AppendMenuW(menu, MF_STRING | (s.enabled ? MF_CHECKED : 0), kMenuToggle,
-                s.enabled ? L"Saypick is On" : L"Saypick is Off");
+                s.enabled ? L"TypeTide is On" : L"TypeTide is Off");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
 
     std::wstring readHint = L"Translate selection:  " + s.readShortcut.displayString();
@@ -57,7 +57,7 @@ void TrayIcon::showMenu(HWND owner) {
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
 
     AppendMenuW(menu, MF_STRING, kMenuSettings, L"Settings…");
-    AppendMenuW(menu, MF_STRING, kMenuQuit, L"Quit Saypick");
+    AppendMenuW(menu, MF_STRING, kMenuQuit, L"Quit TypeTide");
 
     POINT pt{};
     GetCursorPos(&pt);

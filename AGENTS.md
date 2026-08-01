@@ -1,4 +1,4 @@
-# Saypick — Agent Guide
+# TypeTide — Agent Guide
 
 System-wide **AI translation + inline rewrite**, native on two platforms:
 
@@ -33,7 +33,7 @@ pair, per-shortcut direction (auto-detect or fixed), 4 rewrite styles.
 
 ### Conventions & gotchas
 
-- **No sandbox** (`Saypick.entitlements` empty) — needs Accessibility + CGEvent posting. `LSUIElement = true` (menu-bar only).
+- **No sandbox** (`TypeTide.entitlements` empty) — needs Accessibility + CGEvent posting. `LSUIElement = true` (menu-bar only).
 - **Sign dev builds** (Apple Development team is configured) so the Accessibility grant persists across rebuilds; an unsigned/ad-hoc build’s grant won’t stick.
 - Carbon hotkeys fire without Accessibility, but capture/replace are guarded by `AccessibilityPermission.isGranted`.
 - Read direction: detected → `LanguageConfig.sourceLanguage` (native). Write: native → `targetLanguage`.
@@ -43,7 +43,7 @@ pair, per-shortcut direction (auto-detect or fixed), 4 rewrite styles.
 
 ```bash
 cd macos
-xcodebuild -scheme Saypick -configuration Debug build   # signed
+xcodebuild -scheme TypeTide -configuration Debug build   # signed
 ./scripts/build-release.sh                              # notarized DMG (needs .env)
 ```
 
@@ -61,14 +61,14 @@ dependencies (tiny JSON parser included in `src/Json.h`).
 - `src/PopupWindow.*` — streaming translation popup (Copy / Replace, Esc / click-outside dismiss).
 - `src/SelectionIcon.*` / `src/SelectionMonitor.*` — floating icon & auto-translate triggers (WH_MOUSE_LL).
 - `src/SettingsWindow.*` — native settings dialog (tabs: General, Backend, Language, Shortcuts, Behavior, About).
-- `src/Settings.*` — JSON settings at `%APPDATA%\Saypick\settings.json`.
+- `src/Settings.*` — JSON settings at `%APPDATA%\TypeTide\settings.json`.
 - `src/TrayIcon.*`, `src/Hotkeys.*`, `src/LaunchAtLogin.*` (HKCU Run key), `src/UpdateChecker.*`.
 
 ### Conventions & gotchas
 
 - All UI on the main thread, and the main thread NEVER sleeps (a stalled message loop gets WH_*_LL hooks silently removed). Waiting work (clipboard-fallback capture, paste replace, HTTP) lives on worker threads posting `WM_APP_*` messages with heap payloads (receiver frees).
 - Workers must not read `Settings::shared()` — snapshot config on the main thread and pass it in (see `BackendConfig` in Translator.cpp, `FetchInstalledAsync`).
-- Paste replace uses clipboard delayed rendering (WM_RENDERFORMAT = "target consumed the paste"); settings saves are atomic (tmp+rename); crashes dump minidumps to `%APPDATA%\Saypick\crashes`.
+- Paste replace uses clipboard delayed rendering (WM_RENDERFORMAT = "target consumed the paste"); settings saves are atomic (tmp+rename); crashes dump minidumps to `%APPDATA%\TypeTide\crashes`.
 - `RegisterHotKey` fails if another app owns the combo — surface it, don't crash.
 - Keep feature parity with macOS where it makes sense; follow Windows conventions where they differ (tray vs menu bar, Alt vs ⌥, registry Run key vs SMAppService).
 
@@ -90,15 +90,15 @@ the Common-Controls `version="6.0.0.0"` must stay or the exe fails SxS at start.
 Release per platform, either order, onto the same `vX.Y.Z` tag:
 - `scripts/release-windows.ps1` (on Windows) → builds via
   `windows/scripts/build-release.ps1` (Release exe + self-test gate + Inno
-  Setup installer from `windows/installer/Saypick.iss` + portable zip), then
+  Setup installer from `windows/installer/TypeTide.iss` + portable zip), then
   `gh release create`-if-missing + upload.
 - `scripts/release-macos.sh` (on a Mac) → notarized DMG via
   `macos/scripts/build-release.sh`, then create-if-missing + upload
-  `Saypick-X.Y.Z.dmg`.
+  `TypeTide-X.Y.Z.dmg`.
 Both need `gh auth login` once. `UpdateChecker` (both apps) reads
 `releases/latest` at `everettjf/Saypick`.
 
 Keep `README.md` free of the app's release version — link to `../../releases`,
-refer to artifacts as `Saypick-Setup-x.y.z.exe` / `build/Saypick.dmg` style,
+refer to artifacts as `TypeTide-Setup-x.y.z.exe` / `build/TypeTide.dmg` style,
 never a pinned literal version. Platform/dependency versions (macOS 26+,
 Windows 10+, Swift 5.9+, C++20) are fine.

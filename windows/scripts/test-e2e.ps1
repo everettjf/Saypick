@@ -1,8 +1,8 @@
-﻿# 端到端冒烟测试：真实驱动 Saypick.exe + 自建编辑窗口 + mock 后端。
-# 前置：mock-openai.ps1 已在 8199 端口运行；SAYPICK_DATA_DIR 指向含
+﻿# 端到端冒烟测试：真实驱动 TypeTide.exe + 自建编辑窗口 + mock 后端。
+# 前置：mock-openai.ps1 已在 8199 端口运行；TYPETIDE_DATA_DIR 指向含
 # openai/8199 配置的测试目录（Alt+D 读、Alt+R 写、rewritePreview=false）。
 param(
-    [string]$Exe = "$PSScriptRoot\..\build\Saypick.exe",
+    [string]$Exe = "$PSScriptRoot\..\build\TypeTide.exe",
     [string]$Expected = "MOCK_TRANSLATION_OK",
     [switch]$Real   # 真实模型：不比对固定译文，轮询等待并做宽松断言
 )
@@ -58,7 +58,7 @@ function Check([bool]$cond, [string]$name, [string]$detail = "") {
     else { Write-Output "  FAIL $name $detail"; $script:failures++ }
 }
 
-Write-Output "[e2e] launching Saypick"
+Write-Output "[e2e] launching TypeTide"
 $app = Start-Process -FilePath $Exe -PassThru
 Start-Sleep -Seconds 2
 Check (-not $app.HasExited) "app running"
@@ -68,7 +68,7 @@ $host2 = Start-Process powershell -ArgumentList "-NoProfile", "-File", "`"$PSScr
 $hostHwnd = [IntPtr]::Zero
 for ($i = 0; $i -lt 60 -and $hostHwnd -eq [IntPtr]::Zero; $i++) {
     Start-Sleep -Milliseconds 250
-    $hostHwnd = [Win]::FindWindowW($NUL, "SaypickTestHost")
+    $hostHwnd = [Win]::FindWindowW($NUL, "TypeTideTestHost")
 }
 Check ($hostHwnd -ne [IntPtr]::Zero) "edit host window found"
 $editHwnd = [Win]::FindWindowExW($hostHwnd, [IntPtr]::Zero, $NUL, $NUL)  # 第一个子窗口 = 文本框
@@ -94,7 +94,7 @@ Send-Combo @($VK_MENU) 0x44      # Alt+D
 $popup = [IntPtr]::Zero
 for ($i = 0; $i -lt 60 -and $popup -eq [IntPtr]::Zero; $i++) {
     Start-Sleep -Milliseconds 500
-    $popup = [Win]::FindWindowW("SaypickPopup", $NUL)
+    $popup = [Win]::FindWindowW("TypeTidePopup", $NUL)
 }
 Check ($popup -ne [IntPtr]::Zero) "popup window exists"
 if ($popup -ne [IntPtr]::Zero) {
@@ -119,7 +119,7 @@ if ($popup -ne [IntPtr]::Zero) {
 Write-Output "[e2e] Esc closes popup"
 Send-Combo @() $VK_ESCAPE
 Start-Sleep -Milliseconds 800
-Check ([Win]::FindWindowW("SaypickPopup", $NUL) -eq [IntPtr]::Zero) "popup closed"
+Check ([Win]::FindWindowW("TypeTidePopup", $NUL) -eq [IntPtr]::Zero) "popup closed"
 
 Write-Output "[e2e] Alt+R → rewrite in place"
 Ensure-Foreground $hostHwnd | Out-Null

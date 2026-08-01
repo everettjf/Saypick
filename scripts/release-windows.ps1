@@ -22,8 +22,8 @@ $ErrorActionPreference = "Stop"
 # 构建产物
 & (Join-Path $root "windows\scripts\build-release.ps1")
 
-$setup = Join-Path $root "windows\build\Saypick-Setup-$version.exe"
-$zip = Join-Path $root "windows\build\Saypick-Windows-$version.zip"
+$setup = Join-Path $root "windows\build\TypeTide-Setup-$version.exe"
+$zip = Join-Path $root "windows\build\TypeTide-Windows-$version.zip"
 
 # release 不存在则创建
 $ErrorActionPreference = "Continue"
@@ -31,8 +31,8 @@ gh release view $tag --repo everettjf/Saypick *> $null
 $exists = ($LASTEXITCODE -eq 0)
 if (-not $exists) {
     Write-Output "creating release $tag"
-    gh release create $tag --repo everettjf/Saypick --title "Saypick $version" `
-        --notes "Saypick $version — system-wide AI translation & inline rewrite.`n`n- Windows: download and run **Saypick-Setup-$version.exe** (or use the portable zip)`n- macOS: download **Saypick-$version.dmg** (uploaded separately if not yet present)" 2>&1 | ForEach-Object { "$_" }
+    gh release create $tag --repo everettjf/Saypick --title "TypeTide $version" `
+        --notes "TypeTide $version — system-wide AI translation & inline rewrite.`n`n- Windows: download and run **TypeTide-Setup-$version.exe** (or use the portable zip)`n- macOS: download **TypeTide-$version.dmg** (uploaded separately if not yet present)" 2>&1 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
 } else {
     Write-Output "release $tag exists — uploading Windows assets to it"

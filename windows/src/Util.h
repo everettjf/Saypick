@@ -44,23 +44,23 @@ inline std::wstring ToLower(std::wstring s) {
     return s;
 }
 
-/// %APPDATA%\Saypick 目录（不存在则创建）。
-/// SAYPICK_DATA_DIR 环境变量可覆盖（自检/测试用，避免污染真实设置）。
+/// %APPDATA%\TypeTide 目录（不存在则创建）。
+/// TYPETIDE_DATA_DIR 环境变量可覆盖（自检/测试用，避免污染真实设置）。
 inline std::wstring AppDataDir() {
     wchar_t buf[MAX_PATH]{};
-    DWORD n = GetEnvironmentVariableW(L"SAYPICK_DATA_DIR", buf, MAX_PATH);
+    DWORD n = GetEnvironmentVariableW(L"TYPETIDE_DATA_DIR", buf, MAX_PATH);
     if (n && n < MAX_PATH) {
         CreateDirectoryW(buf, nullptr);
         return buf;
     }
     n = GetEnvironmentVariableW(L"APPDATA", buf, MAX_PATH);
     std::wstring dir = (n && n < MAX_PATH) ? buf : L".";
-    dir += L"\\Saypick";
+    dir += L"\\TypeTide";
     CreateDirectoryW(dir.c_str(), nullptr);
     return dir;
 }
 
-/// 调试日志：SAYPICK_DEBUG=1 时追加写 %data%\debug.log（含毫秒时间戳）
+/// 调试日志：TYPETIDE_DEBUG=1 时追加写 %data%\debug.log（含毫秒时间戳）
 void Log(const char* fmt, ...);
 
 } // namespace util

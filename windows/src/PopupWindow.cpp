@@ -8,7 +8,7 @@
 
 namespace {
 
-constexpr wchar_t kClassName[] = L"SaypickPopup";
+constexpr wchar_t kClassName[] = L"TypeTidePopup";
 constexpr UINT_PTR kCopiedTimer = 1;
 
 // 品牌紫（与 README badge 一致）
@@ -82,7 +82,7 @@ void PopupWindow::show(const std::wstring& original, Language target, RECT ancho
     (void)registered;
 
     hwnd_ = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
-                            kClassName, L"Saypick", WS_POPUP,
+                            kClassName, L"TypeTide", WS_POPUP,
                             0, 0, 10, 10, nullptr, nullptr, GetModuleHandleW(nullptr), this);
     util::Log("popup show hwnd=%p", (void*)hwnd_);
     if (!hwnd_) return;
@@ -278,7 +278,7 @@ void PopupWindow::paint(HDC dc) {
     DrawTextW(dc, L"❖", -1, &rcBrand, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
     SetTextColor(dc, th.secondary);
     rcBrand.left += px(16);
-    DrawTextW(dc, L"Saypick", -1, &rcBrand, DT_SINGLELINE | DT_VCENTER);
+    DrawTextW(dc, L"TypeTide", -1, &rcBrand, DT_SINGLELINE | DT_VCENTER);
 
     // 目标语言 chip
     {

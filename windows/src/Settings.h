@@ -1,6 +1,6 @@
 //
 //  Settings.h — 全局设置（对应 macOS 的 AppSettings），
-//  JSON 持久化到 %APPDATA%\Saypick\settings.json。
+//  JSON 持久化到 %APPDATA%\TypeTide\settings.json。
 //
 #pragma once
 #include <windows.h>

@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)   # windows/
-$src = Join-Path (Split-Path -Parent $root) "macos\Saypick\Assets.xcassets\AppIcon.appiconset\appicon_512x512.png"
+$src = Join-Path (Split-Path -Parent $root) "macos\TypeTide\Assets.xcassets\AppIcon.appiconset\appicon_512x512.png"
 $outDir = Join-Path $root "assets"
 $out = Join-Path $outDir "app.ico"
 New-Item -ItemType Directory -Force $outDir | Out-Null

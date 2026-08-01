@@ -18,7 +18,7 @@ command -v gh >/dev/null || { echo "gh not installed — brew install gh" >&2; e
 gh auth status >/dev/null 2>&1 || { echo "gh is not authenticated — run: gh auth login" >&2; exit 1; }
 
 # 提醒：pbxproj 的 MARKETING_VERSION 应已由 bump-version.sh 同步
-PBX_VERSION="$(grep -m1 -Eo 'MARKETING_VERSION = [^;]+' "$ROOT/macos/Saypick.xcodeproj/project.pbxproj" | awk '{print $3}')"
+PBX_VERSION="$(grep -m1 -Eo 'MARKETING_VERSION = [^;]+' "$ROOT/macos/TypeTide.xcodeproj/project.pbxproj" | awk '{print $3}')"
 if [ "$PBX_VERSION" != "$VERSION" ]; then
     echo "warning: pbxproj MARKETING_VERSION ($PBX_VERSION) != VERSION ($VERSION); run scripts/bump-version.sh $VERSION" >&2
     exit 1
@@ -28,18 +28,18 @@ fi
 cd "$ROOT/macos"
 ./scripts/build-release.sh
 
-DMG="$ROOT/macos/build/Saypick-$VERSION.dmg"
+DMG="$ROOT/macos/build/TypeTide-$VERSION.dmg"
 [ -f "$DMG" ] || { echo "DMG not produced at $DMG" >&2; exit 1; }
-NAMED_DMG="$ROOT/macos/build/Saypick-$VERSION.dmg"
+NAMED_DMG="$ROOT/macos/build/TypeTide-$VERSION.dmg"
 
 # release 不存在则创建
 if ! gh release view "$TAG" --repo everettjf/Saypick >/dev/null 2>&1; then
     echo "creating release $TAG"
-    gh release create "$TAG" --repo everettjf/Saypick --title "Saypick $VERSION" \
-        --notes "Saypick $VERSION — system-wide AI translation & inline rewrite.
+    gh release create "$TAG" --repo everettjf/Saypick --title "TypeTide $VERSION" \
+        --notes "TypeTide $VERSION — system-wide AI translation & inline rewrite.
 
-- macOS: download **Saypick-$VERSION.dmg**
-- Windows: download and run **Saypick-Setup-$VERSION.exe** (uploaded separately if not yet present)"
+- macOS: download **TypeTide-$VERSION.dmg**
+- Windows: download and run **TypeTide-Setup-$VERSION.exe** (uploaded separately if not yet present)"
 else
     echo "release $TAG exists — uploading macOS asset to it"
 fi

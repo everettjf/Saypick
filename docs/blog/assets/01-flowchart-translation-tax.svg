@@ -44,8 +44,8 @@
 
   <line x1="40" y1="356" x2="1000" y2="356" stroke="#1e4860" stroke-width="1" stroke-dasharray="3 5"/>
 
-  <!-- SAYPICK WAY -->
-  <text x="40" y="402" fill="#7ee0c0" font-size="17" letter-spacing="1">Saypick · 一个快捷键</text>
+  <!-- TYPETIDE WAY -->
+  <text x="40" y="402" fill="#7ee0c0" font-size="17" letter-spacing="1">TypeTide · 一个快捷键</text>
   <g fill="#0e2a2a" stroke="#7ee0c0" stroke-width="1.8">
     <rect x="40"  y="424" width="170" height="64" rx="8"/>
     <rect x="430" y="424" width="190" height="64" rx="8"/>

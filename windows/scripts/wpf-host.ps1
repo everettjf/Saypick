@@ -1,9 +1,9 @@
 ﻿# E2E 测试宿主（WPF TextBox，支持 UIA TextPattern → 验证 UIA 取词主路径）。
 # TextChanged 时把内容写入 $SyncFile，测试脚本从文件读回验证替换结果。
-param([string]$SyncFile = "$env:TEMP\saypick-wpf-sync.txt")
+param([string]$SyncFile = "$env:TEMP\typetide-wpf-sync.txt")
 Add-Type -AssemblyName PresentationFramework
 $window = New-Object System.Windows.Window
-$window.Title = "SaypickWpfHost"
+$window.Title = "TypeTideWpfHost"
 $window.Width = 600
 $window.Height = 300
 $window.WindowStartupLocation = "CenterScreen"

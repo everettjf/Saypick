@@ -15,7 +15,7 @@
 
 namespace {
 
-constexpr wchar_t kClassName[] = L"SaypickSettings";
+constexpr wchar_t kClassName[] = L"TypeTideSettings";
 // 工作线程取回 Ollama 模型列表：lParam = std::vector<std::wstring>*（接收方释放）
 constexpr UINT kMsgOllamaModels = WM_APP + 100;
 constexpr UINT kMsgUpdateResult = WM_APP + 101;
@@ -310,7 +310,7 @@ void updateLangWarn() {
     SetWindowTextW(ctrl(kLangWarn),
                    s.nativeLanguage == s.foreignLanguage
                        ? L"⚠ Native and foreign are the same language — translation won't do anything useful."
-                       : L"Saypick translates between your native and foreign language. Auto direction detects the text and translates the other way.");
+                       : L"TypeTide translates between your native and foreign language. Auto direction detects the text and translates the other way.");
 }
 
 void buildPages() {
@@ -320,7 +320,7 @@ void buildPages() {
     int y;
     const wchar_t* pageTitles[] = {
         L"General", L"Translation backend", L"Languages", L"Keyboard shortcuts",
-        L"Behavior", L"Excluded apps", L"About Saypick"
+        L"Behavior", L"Excluded apps", L"About TypeTide"
     };
     for (int page = 0; page < 7; ++page) {
         HWND title = makeLabel(pageTitles[page], x, 26, w, kPageTitle0 + page);
@@ -334,11 +334,11 @@ void buildPages() {
     {
     std::vector<HWND> controls = {
         makeLabel(L"APP STATUS", x, y, w, -1, true),
-        make(L"BUTTON", L"Enable Saypick", WS_TABSTOP | BS_AUTOCHECKBOX, x, y + 26, 180, 22, kEnable),
+        make(L"BUTTON", L"Enable TypeTide", WS_TABSTOP | BS_AUTOCHECKBOX, x, y + 26, 180, 22, kEnable),
         makeLabel(L"STARTUP", x, y + 62, w, -1, true),
         make(L"BUTTON", L"Launch at login", WS_TABSTOP | BS_AUTOCHECKBOX, x, y + 88, 180, 22, kLogin),
         makeLabel(L"UPDATES", x, y + 150, w, -1, true),
-        makeLabel(L"Version " SAYPICK_VERSION_STRING, x, y + 178, 200, kVersionLabel),
+        makeLabel(L"Version " TYPETIDE_VERSION_STRING, x, y + 178, 200, kVersionLabel),
         make(L"BUTTON", L"Check for updates", WS_TABSTOP | BS_PUSHBUTTON, x, y + 206, 150, 32, kCheckUpdate),
     };
     g.pages[0].insert(g.pages[0].end(), controls.begin(), controls.end());
@@ -460,7 +460,7 @@ void buildPages() {
         make(L"BUTTON", L"Add", WS_TABSTOP | BS_PUSHBUTTON, x + 290, y - 1, 70, 26, kSkipAdd),
         make(L"LISTBOX", L"", WS_TABSTOP | WS_BORDER | WS_VSCROLL | LBS_NOTIFY, x, y + 34, 360, 240, kSkipList),
         make(L"BUTTON", L"Remove", WS_TABSTOP | BS_PUSHBUTTON, x + 370, y + 34, 80, 26, kSkipRemove),
-        makeLabel(L"Saypick stays inactive in these apps (executable name, e.g. notepad.exe or code.exe).",
+        makeLabel(L"TypeTide stays inactive in these apps (executable name, e.g. notepad.exe or code.exe).",
                   x, y + 284, w, kSkipHint),
     };
     g.pages[5].insert(g.pages[5].end(), controls.begin(), controls.end());
@@ -472,7 +472,7 @@ void buildPages() {
     y = 82;
     {
     std::vector<HWND> controls = {
-        makeLabel(L"Saypick " SAYPICK_VERSION_STRING, x, y, 300, kAboutTitle, true),
+        makeLabel(L"TypeTide " TYPETIDE_VERSION_STRING, x, y, 300, kAboutTitle, true),
         makeLabel(L"System-wide AI translation && inline rewrite for Windows.\n"
                   L"Private local models or secure OpenAI-compatible cloud APIs.",
                   x, y + 28, w, kAboutDesc),
@@ -649,9 +649,9 @@ void onCommand(int id, int code) {
         } else if (!g.saveWarningShown) {
             g.saveWarningShown = true;
             MessageBoxW(g.hwnd,
-                        L"Saypick couldn't save your settings. Your existing settings file was "
+                        L"TypeTide couldn't save your settings. Your existing settings file was "
                         L"left unchanged.\n\nCheck that the settings folder is writable, then try again.",
-                        L"Saypick — settings not saved", MB_OK | MB_ICONWARNING);
+                        L"TypeTide — settings not saved", MB_OK | MB_ICONWARNING);
         }
     }
     if (reapply) applyToApp();
@@ -681,16 +681,16 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         EnableWindow(ctrl(kCheckUpdate), TRUE);
         SetWindowTextW(ctrl(kCheckUpdate), L"Check for updates");
         if (wp == 1) {
-            if (MessageBoxW(hwnd, L"A new Saypick version is available. Open the download page?",
-                            L"Saypick update", MB_YESNO | MB_ICONINFORMATION) == IDYES)
+            if (MessageBoxW(hwnd, L"A new TypeTide version is available. Open the download page?",
+                            L"TypeTide update", MB_YESNO | MB_ICONINFORMATION) == IDYES)
                 updatechecker::OpenReleasesPage();
         } else if (wp == 0) {
-            MessageBoxW(hwnd, L"You're using the latest version.", L"Saypick update",
+            MessageBoxW(hwnd, L"You're using the latest version.", L"TypeTide update",
                         MB_OK | MB_ICONINFORMATION);
         } else {
             MessageBoxW(hwnd,
-                        L"Saypick couldn't check for updates. Check your internet connection and try again.",
-                        L"Saypick update", MB_OK | MB_ICONWARNING);
+                        L"TypeTide couldn't check for updates. Check your internet connection and try again.",
+                        L"TypeTide update", MB_OK | MB_ICONWARNING);
         }
         return 0;
     case WM_NOTIFY: {
@@ -816,7 +816,7 @@ void open(HWND appWindow) {
     RECT wr{0, 0, w, h};
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME), FALSE);
 
-    g.hwnd = CreateWindowExW(0, kClassName, L"Saypick Settings",
+    g.hwnd = CreateWindowExW(0, kClassName, L"TypeTide Settings",
                              (WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME)) | WS_VISIBLE,
                              CW_USEDEFAULT, CW_USEDEFAULT,
                              wr.right - wr.left, wr.bottom - wr.top,

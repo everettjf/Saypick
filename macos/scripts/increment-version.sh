@@ -22,7 +22,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PBXPROJ_PATH="$PROJECT_ROOT/Saypick.xcodeproj/project.pbxproj"
+PBXPROJ_PATH="$PROJECT_ROOT/TypeTide.xcodeproj/project.pbxproj"
 
 # 检查 project.pbxproj 是否存在
 if [ ! -f "$PBXPROJ_PATH" ]; then

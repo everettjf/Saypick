@@ -4,7 +4,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SaypickTestHost"
+$form.Text = "TypeTideTestHost"
 $form.Width = 600
 $form.Height = 300
 $form.StartPosition = "CenterScreen"

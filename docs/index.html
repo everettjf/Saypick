@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Saypick — System-wide AI translation &amp; inline rewrite for macOS</title>
-<meta name="description" content="Saypick lives in your macOS menu bar. Select text to translate, or type in your language and rewrite it in place — powered by local Ollama or any OpenAI-compatible model." />
-<meta property="og:title" content="Saypick — AI translation &amp; inline rewrite for macOS" />
+<title>TypeTide — System-wide AI translation &amp; inline rewrite for macOS</title>
+<meta name="description" content="TypeTide lives in your macOS menu bar. Select text to translate, or type in your language and rewrite it in place — powered by local Ollama or any OpenAI-compatible model." />
+<meta property="og:title" content="TypeTide — AI translation &amp; inline rewrite for macOS" />
 <meta property="og:description" content="Select to translate. Type to rewrite in place. Local or cloud AI. Works in any app." />
 <meta property="og:type" content="website" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23d23a1d'/><text x='50' y='72' font-size='62' font-family='Georgia,serif' fill='%23f5f0e6' text-anchor='middle'>S</text></svg>" />
@@ -182,12 +182,12 @@
 <svg class="grain"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
 
 <nav>
-  <a class="brand" href="#top"><span class="mark">S</span> Saypick</a>
+  <a class="brand" href="#top"><span class="mark">S</span> TypeTide</a>
   <div class="nav-links">
     <a href="#use">How it works</a>
     <a href="#features">Features</a>
     <a href="#backends">Backends</a>
-    <a href="https://github.com/everettjf/Saypick/blob/main/docs/blog/introducing-saypick.md">Blog</a>
+    <a href="https://github.com/everettjf/Saypick/blob/main/docs/blog/introducing-typetide.md">Blog</a>
     <a class="ghbtn" href="https://github.com/everettjf/Saypick">GitHub ↗</a>
   </div>
 </nav>
@@ -202,11 +202,11 @@
       <svg class="underx" viewBox="0 0 440 13" fill="none" preserveAspectRatio="none"><path d="M3 8C84 3 210 2 437 6" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
       <em>Read</em> any language. <em>Rewrite</em> your own.
     </h1>
-    <p class="sub">Saypick lives in your menu bar. <b>Select</b> foreign text to translate it in a popup, or <b>type</b> in your language and have it <b>rewritten in place</b> — in any app, one shortcut each.</p>
+    <p class="sub">TypeTide lives in your menu bar. <b>Select</b> foreign text to translate it in a popup, or <b>type</b> in your language and have it <b>rewritten in place</b> — in any app, one shortcut each.</p>
 
     <div class="actions">
       <div class="cmd" id="brew">
-        <span><span class="pr">$</span> brew install --cask everettjf/saypick/saypick</span>
+        <span><span class="pr">$</span> brew install --cask everettjf/saypick/typetide</span>
         <button onclick="copyBrew()" id="copybtn">Copy</button>
       </div>
       <a class="btn solid" href="https://github.com/everettjf/Saypick/releases">Download .dmg</a>
@@ -281,7 +281,7 @@
       <div class="be reveal">
         <span class="tag">On-device</span>
         <h4>Ollama</h4>
-        <p>Offline and private. Install a model and go — Saypick auto-picks an installed one if your configured model isn't there.</p>
+        <p>Offline and private. Install a model and go — TypeTide auto-picks an installed one if your configured model isn't there.</p>
         <pre><span class="pr">$</span> ollama pull qwen2.5:3b</pre>
       </div>
       <div class="be reveal">
@@ -299,7 +299,7 @@
     <h2>Translate in place.</h2>
     <p>Free, open source, and private. Set up in under two minutes.</p>
     <div class="cmd">
-      <span><span class="pr">$</span> brew install --cask everettjf/saypick/saypick</span>
+      <span><span class="pr">$</span> brew install --cask everettjf/saypick/typetide</span>
       <button onclick="copyBrew()">Copy</button>
     </div>
     <div class="actions">
@@ -309,10 +309,10 @@
   </div>
 
   <footer>
-    <div class="fb">Saypick</div>
+    <div class="fb">TypeTide</div>
     <div class="fl">
       <a href="https://github.com/everettjf/Saypick">GitHub</a>
-      <a href="https://github.com/everettjf/Saypick/blob/main/docs/blog/introducing-saypick.md">Blog</a>
+      <a href="https://github.com/everettjf/Saypick/blob/main/docs/blog/introducing-typetide.md">Blog</a>
       <a href="https://discord.com/invite/eGzEaP6TzR">Discord</a>
       <a href="https://github.com/everettjf/Saypick/blob/main/LICENSE">MIT License</a>
     </div>
@@ -321,7 +321,7 @@
 
 <script>
   function copyBrew(){
-    navigator.clipboard.writeText("brew install --cask everettjf/saypick/saypick");
+    navigator.clipboard.writeText("brew install --cask everettjf/saypick/typetide");
     document.querySelectorAll('.cmd button').forEach(b=>{const t=b.textContent;b.textContent="Copied ✓";setTimeout(()=>b.textContent=t,1400)});
   }
   const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});

@@ -79,7 +79,7 @@ void Settings::load() {
     if (openAIBaseURL.size() > 2048) openAIBaseURL = "https://api.openai.com/v1";
     const std::string legacyKey = str("openAIKey", "");
     wchar_t testDir[2]{};
-    const bool isolatedTest = GetEnvironmentVariableW(L"SAYPICK_DATA_DIR", testDir, 2) != 0;
+    const bool isolatedTest = GetEnvironmentVariableW(L"TYPETIDE_DATA_DIR", testDir, 2) != 0;
     bool migratedLegacyKey = false;
     if (isolatedTest) {
         openAIKey = legacyKey;
@@ -150,7 +150,7 @@ bool Settings::save() const {
 
     root["openAIBaseURL"] = openAIBaseURL;
     wchar_t testDir[2]{};
-    const bool isolatedTest = GetEnvironmentVariableW(L"SAYPICK_DATA_DIR", testDir, 2) != 0;
+    const bool isolatedTest = GetEnvironmentVariableW(L"TYPETIDE_DATA_DIR", testDir, 2) != 0;
     if (isolatedTest) root["openAIKey"] = openAIKey;
     else if (!credentials::SaveCloudApiKey(openAIKey)) {
         util::Log("settings: credential save failed (%lu)", GetLastError());

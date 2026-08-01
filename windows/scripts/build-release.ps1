@@ -1,15 +1,15 @@
 ﻿# Windows 发布构建：Release exe + Inno Setup 安装包 + 便携 zip。
 # 版本号读根目录 VERSION 文件（用 scripts/bump-version.sh 递增）。
 # 产物：
-#   windows/build/Saypick.exe
-#   windows/build/Saypick-Setup-{v}.exe     （安装包）
-#   windows/build/Saypick-Windows-{v}.zip   （便携版）
+#   windows/build/TypeTide.exe
+#   windows/build/TypeTide-Setup-{v}.exe     （安装包）
+#   windows/build/TypeTide-Windows-{v}.zip   （便携版）
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
 $win = Join-Path $root "windows"
 $version = (Get-Content (Join-Path $root "VERSION") -Raw).Trim()
-Write-Output "building Saypick for Windows v$version"
+Write-Output "building TypeTide for Windows v$version"
 
 # --- 定位工具链 ---
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -31,23 +31,23 @@ $ErrorActionPreference = "Continue"
 cmd /c "`"$devcmd`" -arch=amd64 -no_logo 2>nul && cd /d `"$win`" && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build" 2>&1 | ForEach-Object { "$_" }
 $ErrorActionPreference = $eap
 if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
-$exe = Join-Path $win "build\Saypick.exe"
-if (-not (Test-Path $exe)) { throw "Saypick.exe not produced" }
+$exe = Join-Path $win "build\TypeTide.exe"
+if (-not (Test-Path $exe)) { throw "TypeTide.exe not produced" }
 
 # 构建后快速自检（Start-Process：exe 起不来（如 SxS 配置损坏）也会抛错，
 # 直接用 & 调用时 $LASTEXITCODE 不会更新，坏包会溜进安装器）
-$env:SAYPICK_DATA_DIR = Join-Path $env:TEMP "saypick-release-selftest"
+$env:TYPETIDE_DATA_DIR = Join-Path $env:TEMP "typetide-release-selftest"
 $st = Start-Process -FilePath $exe -ArgumentList "--selftest" -NoNewWindow -Wait -PassThru
 if ($st.ExitCode -ne 0) { throw "self-test failed (exit $($st.ExitCode))" }
-Remove-Item Env:\SAYPICK_DATA_DIR
+Remove-Item Env:\TYPETIDE_DATA_DIR
 
 # --- 安装包 ---
-& $iscc "/DAppVersion=$version" (Join-Path $win "installer\Saypick.iss") | Select-Object -Last 3
+& $iscc "/DAppVersion=$version" (Join-Path $win "installer\TypeTide.iss") | Select-Object -Last 3
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
-$setup = Join-Path $win "build\Saypick-Setup-$version.exe"
+$setup = Join-Path $win "build\TypeTide-Setup-$version.exe"
 
 # --- 便携 zip ---
-$zip = Join-Path $win "build\Saypick-Windows-$version.zip"
+$zip = Join-Path $win "build\TypeTide-Windows-$version.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path $exe -DestinationPath $zip
 

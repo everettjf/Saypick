@@ -287,7 +287,7 @@ StreamOutcome runOpenAI(const TranslationRequest& req, const BackendConfig& s, u
         headers += L"Authorization: Bearer " + util::Widen(s.openAIKey) + L"\r\n";
     if (base.find("openrouter.ai") != std::string::npos) {
         headers += L"HTTP-Referer: https://everettjf.github.io/Saypick/\r\n";
-        headers += L"X-OpenRouter-Title: Saypick\r\n";
+        headers += L"X-OpenRouter-Title: TypeTide\r\n";
     }
 
     LineAssembler lines;

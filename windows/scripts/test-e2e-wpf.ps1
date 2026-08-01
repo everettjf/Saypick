@@ -1,7 +1,7 @@
 ﻿# E2E 第二轮：WPF 宿主（UIA TextPattern 主路径 + 选区锚点）。
-# 前置同 test-e2e.ps1（mock 8199 + SAYPICK_DATA_DIR 测试配置）。
+# 前置同 test-e2e.ps1（mock 8199 + TYPETIDE_DATA_DIR 测试配置）。
 param(
-    [string]$Exe = "$PSScriptRoot\..\build\Saypick.exe",
+    [string]$Exe = "$PSScriptRoot\..\build\TypeTide.exe",
     [string]$Expected = "MOCK_TRANSLATION_OK",
     [switch]$Real   # 真实模型：不比对固定译文，轮询等待并做宽松断言
 )
@@ -49,16 +49,16 @@ function Check([bool]$cond, [string]$name, [string]$detail = "") {
     else { Write-Output "  FAIL $name $detail"; $script:failures++ }
 }
 
-$sync = Join-Path $env:TEMP "saypick-wpf-sync.txt"
+$sync = Join-Path $env:TEMP "typetide-wpf-sync.txt"
 Remove-Item $sync -ErrorAction SilentlyContinue
 
-Write-Output "[wpf] launching Saypick + WPF host"
+Write-Output "[wpf] launching TypeTide + WPF host"
 $app = Start-Process -FilePath $Exe -PassThru
 $hostProc = Start-Process powershell -ArgumentList "-NoProfile", "-File", "`"$PSScriptRoot\wpf-host.ps1`"", "-SyncFile", "`"$sync`"" -PassThru
 $hostHwnd = [IntPtr]::Zero
 for ($i = 0; $i -lt 60 -and $hostHwnd -eq [IntPtr]::Zero; $i++) {
     Start-Sleep -Milliseconds 250
-    $hostHwnd = [Win]::FindWindowW($NUL, "SaypickWpfHost")
+    $hostHwnd = [Win]::FindWindowW($NUL, "TypeTideWpfHost")
 }
 Check ($hostHwnd -ne [IntPtr]::Zero) "wpf host window found"
 Check (Ensure-Foreground $hostHwnd) "wpf host foregrounded"
@@ -71,7 +71,7 @@ Send-Combo @($VK_MENU) 0x44
 $popup = [IntPtr]::Zero
 for ($i = 0; $i -lt 60 -and $popup -eq [IntPtr]::Zero; $i++) {
     Start-Sleep -Milliseconds 500
-    $popup = [Win]::FindWindowW("SaypickPopup", $NUL)
+    $popup = [Win]::FindWindowW("TypeTidePopup", $NUL)
 }
 Check ($popup -ne [IntPtr]::Zero) "popup exists"
 if ($popup -ne [IntPtr]::Zero) {

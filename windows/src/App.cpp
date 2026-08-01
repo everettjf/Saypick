@@ -44,7 +44,7 @@ bool App::init(HINSTANCE inst) {
     RegisterClassW(&wc);
 
     // 隐藏主窗口（顶层不可见；托盘与热键的宿主）
-    hwnd_ = CreateWindowExW(0, kAppWindowClass, L"Saypick", 0, 0, 0, 0, 0,
+    hwnd_ = CreateWindowExW(0, kAppWindowClass, L"TypeTide", 0, 0, 0, 0, 0,
                             nullptr, nullptr, inst, nullptr);
     if (!hwnd_) return false;
 
@@ -102,7 +102,7 @@ void App::applyEnabledState() {
         std::wstring message = L"These shortcuts could not be registered:\n\n" + unavailable +
                                L"\n\nChoose different shortcuts in Settings → Shortcuts.";
         MessageBoxW(nullptr, message.c_str(),
-                    L"Saypick — shortcut unavailable", MB_OK | MB_ICONWARNING);
+                    L"TypeTide — shortcut unavailable", MB_OK | MB_ICONWARNING);
     }
     if (ok1 && ok2) hotkeyWarningShown_ = false;
 

@@ -9,10 +9,10 @@
 #   ./scripts/bump-version.sh 1.2.3      # 指定版本
 #
 # 版本号唯一来源是根目录 VERSION 文件；本脚本同步写入：
-#   - macos/Saypick.xcodeproj/project.pbxproj  (MARKETING_VERSION)
+#   - macos/TypeTide.xcodeproj/project.pbxproj  (MARKETING_VERSION)
 #   - windows/CMakeLists.txt                   (project VERSION)
-#   - windows/src/Saypick.rc                   (FILEVERSION / 字符串)
-#   - windows/src/Saypick.manifest             (assemblyIdentity version)
+#   - windows/src/TypeTide.rc                   (FILEVERSION / 字符串)
+#   - windows/src/TypeTide.manifest             (assemblyIdentity version)
 #
 # macOS 的 build number (CURRENT_PROJECT_VERSION) 独立管理，
 # 仍用 macos/scripts/increment-build.sh。
@@ -49,11 +49,11 @@ echo "$NEW" > "$VERSION_FILE"
 
 # macOS
 sed -i.bumpbak -E "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $NEW;/g" \
-    "$ROOT/macos/Saypick.xcodeproj/project.pbxproj"
-rm -f "$ROOT/macos/Saypick.xcodeproj/project.pbxproj.bumpbak"
+    "$ROOT/macos/TypeTide.xcodeproj/project.pbxproj"
+rm -f "$ROOT/macos/TypeTide.xcodeproj/project.pbxproj.bumpbak"
 
 # Windows: CMake
-sed -i.bumpbak -E "s/^project\(Saypick VERSION [0-9.]+/project(Saypick VERSION $NEW/" \
+sed -i.bumpbak -E "s/^project\(TypeTide VERSION [0-9.]+/project(TypeTide VERSION $NEW/" \
     "$ROOT/windows/CMakeLists.txt"
 rm -f "$ROOT/windows/CMakeLists.txt.bumpbak"
 
@@ -63,14 +63,14 @@ sed -i.bumpbak -E \
     -e "s/PRODUCTVERSION [0-9]+,[0-9]+,[0-9]+,[0-9]+/PRODUCTVERSION $NEW_MAJOR,$NEW_MINOR,$NEW_PATCH,0/" \
     -e "s/(\"FileVersion\", \")[0-9.]+/\1$NEW/" \
     -e "s/(\"ProductVersion\", \")[0-9.]+/\1$NEW/" \
-    "$ROOT/windows/src/Saypick.rc"
-rm -f "$ROOT/windows/src/Saypick.rc.bumpbak"
+    "$ROOT/windows/src/TypeTide.rc"
+rm -f "$ROOT/windows/src/TypeTide.rc.bumpbak"
 
 # Windows: manifest —— 只改应用自身的 assemblyIdentity，
 # 千万别碰 Common-Controls 依赖的 version="6.0.0.0"（改了会 SxS 启动失败）
-sed -i.bumpbak -E "s/(version=\")[0-9.]+(\" processorArchitecture=\"\*\" name=\"everettjf.Saypick\")/\1$NEW.0\2/" \
-    "$ROOT/windows/src/Saypick.manifest"
-rm -f "$ROOT/windows/src/Saypick.manifest.bumpbak"
+sed -i.bumpbak -E "s/(version=\")[0-9.]+(\" processorArchitecture=\"\*\" name=\"everettjf.TypeTide\")/\1$NEW.0\2/" \
+    "$ROOT/windows/src/TypeTide.manifest"
+rm -f "$ROOT/windows/src/TypeTide.manifest.bumpbak"
 
 echo "version: $CURRENT -> $NEW"
 echo "synced:  VERSION, macos pbxproj, windows CMakeLists/rc/manifest"

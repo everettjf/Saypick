@@ -62,7 +62,7 @@ void checkWorker(HWND notifyWindow, UINT notifyMessage, bool alwaysNotify) {
         if (alwaysNotify && notifyWindow) PostMessageW(notifyWindow, notifyMessage, 2, 0);
         return;
     }
-    const bool newer = isNewer(tag, SAYPICK_VERSION_STRING);
+    const bool newer = isNewer(tag, TYPETIDE_VERSION_STRING);
 
     if (newer) {
         std::lock_guard lock(g_mu);

@@ -43,7 +43,7 @@ warning() {
 }
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PBXPROJ_PATH="$PROJECT_ROOT/Saypick.xcodeproj/project.pbxproj"
+PBXPROJ_PATH="$PROJECT_ROOT/TypeTide.xcodeproj/project.pbxproj"
 
 # 检查 project.pbxproj 是否存在
 if [ ! -f "$PBXPROJ_PATH" ]; then
@@ -63,12 +63,12 @@ if [ -z "$BUILD_NUMBER" ]; then
 fi
 
 BUILD_DIR="$PROJECT_ROOT/build"
-ARCHIVE_PATH="$BUILD_DIR/Saypick.xcarchive"
+ARCHIVE_PATH="$BUILD_DIR/TypeTide.xcarchive"
 EXPORT_DIR="$BUILD_DIR/export"
-APP_NAME="Saypick"
+APP_NAME="TypeTide"
 APP_PATH="$EXPORT_DIR/$APP_NAME.app"
 
-info "Building Saypick version $VERSION (build $BUILD_NUMBER)"
+info "Building TypeTide version $VERSION (build $BUILD_NUMBER)"
 info "Project root: $PROJECT_ROOT"
 
 # 发布凭据只从调用方导出的环境变量读取，不加载仓库内的密钥文件。
@@ -105,7 +105,7 @@ info "Step 2/6: Building archive..."
 cd "$PROJECT_ROOT"
 
 xcodebuild archive \
-    -scheme Saypick \
+    -scheme TypeTide \
     -configuration Release \
     -archivePath "$ARCHIVE_PATH" \
     -destination "generic/platform=macOS" \

@@ -6,7 +6,7 @@ namespace launchatlogin {
 
 namespace {
 constexpr wchar_t kRunKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-constexpr wchar_t kValueName[] = L"Saypick";
+constexpr wchar_t kValueName[] = L"TypeTide";
 } // namespace
 
 bool IsEnabled() {

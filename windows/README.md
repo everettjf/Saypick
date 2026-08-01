@@ -1,6 +1,6 @@
-# Saypick for Windows
+# TypeTide for Windows
 
-Native Win32 C++20 port of Saypick — system-wide AI translation & inline
+Native Win32 C++20 port of TypeTide — system-wide AI translation & inline
 rewrite. Zero third-party dependencies: WinHTTP for networking, UI Automation
 for selection capture, a tiny built-in JSON parser. No Electron, no runtime.
 
@@ -24,8 +24,8 @@ for selection capture, a tiny built-in JSON parser. No Electron, no runtime.
 | Settings | SwiftUI window | native tabbed window |
 | Permissions needed | Accessibility | none |
 
-Settings persist to `%APPDATA%\Saypick\settings.json`
-(override dir with the `SAYPICK_DATA_DIR` env var; set `SAYPICK_DEBUG=1` to
+Settings persist to `%APPDATA%\TypeTide\settings.json`
+(override dir with the `TYPETIDE_DATA_DIR` env var; set `TYPETIDE_DEBUG=1` to
 write `debug.log` beside it).
 
 Cloud API presets are available for OpenAI, OpenRouter, and DeepSeek, alongside
@@ -43,7 +43,7 @@ all bundled with the "Desktop development with C++" workload).
 # from a VS Developer PowerShell / Command Prompt
 cd windows
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build          # → build\Saypick.exe
+cmake --build build          # → build\TypeTide.exe
 ```
 
 The tray icon (`assets/app.ico`) is generated from the macOS icon set with
@@ -53,10 +53,10 @@ The tray icon (`assets/app.ico`) is generated from the macOS icon set with
 
 ```powershell
 # unit-style self-tests (JSON, language detection, settings, prompts)
-build\Saypick.exe --selftest
+build\TypeTide.exe --selftest
 
 # + a real streaming translation through the configured backend
-build\Saypick.exe --selftest-translate
+build\TypeTide.exe --selftest-translate
 ```
 
 End-to-end (drives the real app + a mock backend + a scratch editor window;
@@ -67,7 +67,7 @@ uses synthetic input, so keep hands off the keyboard while it runs):
 scripts\mock-openai.ps1
 
 # terminal 2 — point the app at a scratch data dir with mock settings, then:
-$env:SAYPICK_DATA_DIR = "$env:TEMP\saypick-e2e"
+$env:TYPETIDE_DATA_DIR = "$env:TEMP\typetide-e2e"
 scripts\test-e2e.ps1        # WinForms host → clipboard-fallback capture path
 scripts\test-e2e-wpf.ps1    # WPF host → UI Automation TextPattern path
 ```
@@ -102,7 +102,7 @@ Reliability notes:
   know when the target actually consumed the paste before restoring the
   original clipboard.
 - `settings.json` writes are atomic (temp file + rename).
-- Unhandled exceptions write a minidump to `%APPDATA%\Saypick\crashes\`
+- Unhandled exceptions write a minidump to `%APPDATA%\TypeTide\crashes\`
   (the 5 most recent are kept) — attach one when reporting a crash.
 - The tray icon re-registers itself after an explorer.exe restart.
 - Selections over 5000 characters are rejected with a friendly message.
@@ -118,5 +118,5 @@ otherwise a 2-second translation silently burns minutes on hidden reasoning.
   at the cursor instead of the selection.
 - The settings window follows the system light theme only (the popup follows
   dark mode).
-- `RegisterHotKey` fails if another app owns the combo; Saypick warns once and
+- `RegisterHotKey` fails if another app owns the combo; TypeTide warns once and
   you can pick a different shortcut in Settings → Shortcuts.

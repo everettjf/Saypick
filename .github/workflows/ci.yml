@@ -21,8 +21,8 @@ jobs:
         shell: pwsh
         run: |
           # GUI 子系统 exe：& 调用不等待、$LASTEXITCODE 不更新，必须 Start-Process -Wait
-          $env:SAYPICK_DATA_DIR = "$env:RUNNER_TEMP\saypick-ci"
-          $p = Start-Process -FilePath windows\build\Release\Saypick.exe `
+          $env:TYPETIDE_DATA_DIR = "$env:RUNNER_TEMP\typetide-ci"
+          $p = Start-Process -FilePath windows\build\Release\TypeTide.exe `
               -ArgumentList '--selftest' -NoNewWindow -Wait -PassThru
           exit $p.ExitCode
 
@@ -30,10 +30,10 @@ jobs:
         shell: pwsh
         run: |
           $version = (Get-Content VERSION -Raw).Trim()
-          if (-not (Select-String -Quiet -Path windows/CMakeLists.txt -Pattern "project\(Saypick VERSION $([regex]::Escape($version)) ")) {
+          if (-not (Select-String -Quiet -Path windows/CMakeLists.txt -Pattern "project\(TypeTide VERSION $([regex]::Escape($version)) ")) {
             throw "windows/CMakeLists.txt does not match VERSION=$version"
           }
-          [xml](Get-Content windows/src/Saypick.manifest -Raw) | Out-Null
+          [xml](Get-Content windows/src/TypeTide.manifest -Raw) | Out-Null
 
   macos:
     name: macOS unit + end-to-end tests
@@ -42,16 +42,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: XCTest (unsigned)
         run: |
-          xcodebuild -project Saypick.xcodeproj -scheme Saypick \
+          xcodebuild -project TypeTide.xcodeproj -scheme TypeTide \
             -configuration Debug -destination 'platform=macOS' \
-            -derivedDataPath "$RUNNER_TEMP/SaypickDerivedData" \
+            -derivedDataPath "$RUNNER_TEMP/TypeTideDerivedData" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY= test
         working-directory: macos
 
       - name: Static analysis
         run: |
-          xcodebuild -project Saypick.xcodeproj -scheme Saypick \
+          xcodebuild -project TypeTide.xcodeproj -scheme TypeTide \
             -configuration Debug -destination 'platform=macOS' \
-            -derivedDataPath "$RUNNER_TEMP/SaypickDerivedData" \
+            -derivedDataPath "$RUNNER_TEMP/TypeTideDerivedData" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY= analyze
         working-directory: macos

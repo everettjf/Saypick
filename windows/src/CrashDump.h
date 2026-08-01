@@ -1,5 +1,5 @@
 //
-//  CrashDump.h — 未处理异常时写 minidump 到 %APPDATA%\Saypick\crashes\。
+//  CrashDump.h — 未处理异常时写 minidump 到 %APPDATA%\TypeTide\crashes\。
 //
 #pragma once
 

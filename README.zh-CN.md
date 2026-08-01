@@ -1,4 +1,4 @@
-<h1 align="center">Saypick</h1>
+<h1 align="center">TypeTide</h1>
 <p align="center"><b>macOS 和 Windows 上的全局 AI 翻译与原地改写</b></p>
 
 <p align="center">
@@ -13,11 +13,11 @@
 
 <p align="center">
   <a href="https://everettjf.github.io/Saypick/">🌐 官网</a> ·
-  <a href="docs/blog/introducing-saypick.md">📝 项目介绍</a> ·
+  <a href="docs/blog/introducing-typetide.md">📝 项目介绍</a> ·
   <a href="README.md">English</a> · <b>简体中文</b>
 </p>
 
-Saypick 常驻菜单栏（macOS）或系统托盘（Windows），在**任何**应用里都能用。两件事，各一个快捷键：
+TypeTide 常驻菜单栏（macOS）或系统托盘（Windows），在**任何**应用里都能用。两件事，各一个快捷键：
 
 - **读** — 选中外语文字，按下快捷键，译文就在旁边弹出。
 - **写** — 用母语打字，按下快捷键，文字**原地改写**成目标语言，直接可以发送。
@@ -53,9 +53,9 @@ Saypick 常驻菜单栏（macOS）或系统托盘（Windows），在**任何**�
 - **只住菜单栏 / 托盘** — 不占 Dock、不占任务栏。全局快捷键、开机自启、按应用跳过列表。
 - **双平台全原生** — macOS 用 SwiftUI，Windows 用 Win32 C++。没有 Electron，没有运行时。
 
-## 💡 为什么选 Saypick
+## 💡 为什么选 TypeTide
 
-| | Saypick | 浏览器翻译网站 | 系统自带翻译 |
+| | TypeTide | 浏览器翻译网站 | 系统自带翻译 |
 |---|---|---|---|
 | 任何应用里都能用（邮件、聊天、IDE、终端） | ✅ | ❌（来回粘贴） | ⚠️ 仅菜单 |
 | 回复场景**原地改写** | ✅ | ❌ | ❌ |
@@ -79,21 +79,21 @@ ollama serve             # 通常已作为服务在运行
 ```
 ……或者用云端：在**设置 → Backend** 里选 *OpenAI-compatible*，填入 base URL、API key 和模型名。
 
-Saypick 会在**设置 → Backend** 里列出你已安装的模型；配置的模型没装时会自动换成已装的——拉取*任意*一个对话模型就能跑起来。
+TypeTide 会在**设置 → Backend** 里列出你已安装的模型；配置的模型没装时会自动换成已装的——拉取*任意*一个对话模型就能跑起来。
 
-**2. 安装 Saypick**
+**2. 安装 TypeTide**
 
 macOS——推荐用 [Homebrew](https://brew.sh)：
 ```bash
-brew install --cask everettjf/saypick/saypick
+brew install --cask everettjf/saypick/typetide
 ```
 ……或者从 [Releases](../../releases) 下载最新 `.dmg`，拖进「应用程序」后启动。安装包已由 Apple 签名和公证。
 
-Windows——从 [Releases](../../releases) 下载最新的 `Saypick-Setup-x.y.z.exe` 安装包运行即可（按用户安装，无需管理员权限；也提供便携版 `Saypick-Windows-x.y.z.zip`）。如果 SmartScreen 提示无法识别的应用，点**更多信息 → 仍要运行**。
+Windows——从 [Releases](../../releases) 下载最新的 `TypeTide-Setup-x.y.z.exe` 安装包运行即可（按用户安装，无需管理员权限；也提供便携版 `TypeTide-Windows-x.y.z.zip`）。如果 SmartScreen 提示无法识别的应用，点**更多信息 → 仍要运行**。
 
 **3. 首次运行**
 
-macOS：在**系统设置 → 隐私与安全性 → 辅助功能**里允许 Saypick（读取选区和替换文字需要）。Windows 无需任何特殊权限。然后：
+macOS：在**系统设置 → 隐私与安全性 → 辅助功能**里允许 TypeTide（读取选区和替换文字需要）。Windows 无需任何特殊权限。然后：
 
 - 选中文字 → **⌥D**（macOS）/ **Alt+D**（Windows）→ 看译文。
 - 用母语输入 → **⌥R** / **Alt+R** → 原地改写。
@@ -123,7 +123,7 @@ macOS：在**系统设置 → 隐私与安全性 → 辅助功能**里允许 Say
 
 ```
 macos/                 # SwiftUI 应用（Xcode 工程）
-├── Saypick/
+├── TypeTide/
 │   ├── Core/          # SelectionCapture、TextReplacer、TriggerController、
 │   │                  # SelectionMonitor、PopupPositioner、LaunchAtLogin 等
 │   ├── Translation/   # TranslationProvider、Ollama / OpenAI provider、
@@ -147,10 +147,10 @@ docs/                  # GitHub Pages 站点 + 博客 + 截图
 macOS：
 ```bash
 cd macos
-open Saypick.xcodeproj          # ⌘R 运行
+open TypeTide.xcodeproj          # ⌘R 运行
 
 # 签名发布 + 公证 DMG（先导出 APPLE_ID、APPLE_SPECIFIC_PASSWORD、APPLE_TEAM_ID）
-./scripts/build-release.sh      # → build/Saypick-x.y.z.dmg
+./scripts/build-release.sh      # → build/TypeTide-x.y.z.dmg
 ```
 
 要求：macOS 26+、Xcode 15+。应用**未**沙盒化（需要辅助功能权限 + 合成键盘事件）。本地开发构建请用你的 Apple Development 团队签名，这样辅助功能授权在重新构建后依然有效。
@@ -159,7 +159,7 @@ Windows：
 ```powershell
 cd windows
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build             # → build/Saypick.exe
+cmake --build build             # → build/TypeTide.exe
 ```
 
 要求：Windows 10+、Visual Studio 2022+（MSVC、CMake、Ninja）。零第三方依赖——纯 Win32 + WinHTTP + UI Automation。架构与测试体系见 [windows/README.md](windows/README.md)。
@@ -177,11 +177,11 @@ cmake --build build             # → build/Saypick.exe
 
 ## 🔧 常见问题
 
-- **快捷键没反应** → macOS：确认辅助功能已授权（设置 → General 显示 *Granted*）且菜单栏里 Saypick 处于开启状态。Windows：可能有其他应用占用了该热键——在**设置 → Shortcuts** 里换一个。
-- **没有译文** → Ollama：`ollama serve` 在运行吗？模型装了吗？（配置的模型没装时 Saypick 会自动换成已装的。）OpenAI：检查 base URL / key / 模型名。
-- **qwen3 之类的模型翻译特别慢** → Saypick 已为 Ollama 模型自动关闭隐藏「思考」；如果还是慢，可能是模型对你的硬件太大了——在**设置 → Backend** 的下拉框里换个小的。
+- **快捷键没反应** → macOS：确认辅助功能已授权（设置 → General 显示 *Granted*）且菜单栏里 TypeTide 处于开启状态。Windows：可能有其他应用占用了该热键——在**设置 → Shortcuts** 里换一个。
+- **没有译文** → Ollama：`ollama serve` 在运行吗？模型装了吗？（配置的模型没装时 TypeTide 会自动换成已装的。）OpenAI：检查 base URL / key / 模型名。
+- **qwen3 之类的模型翻译特别慢** → TypeTide 已为 Ollama 模型自动关闭隐藏「思考」；如果还是慢，可能是模型对你的硬件太大了——在**设置 → Backend** 的下拉框里换个小的。
 - **某些应用里弹窗位置不准** → 这些应用不暴露文字边界；弹窗会退回到光标位置。
-- **Sequoia 或更早的 macOS 提示无法打开** → Saypick 要求 **macOS 26+**。它基于当前的 SwiftUI 菜单栏和设置 API 构建，保持单一现代基线是小项目可靠性的前提。暂无支持旧版 macOS 的计划。
+- **Sequoia 或更早的 macOS 提示无法打开** → TypeTide 要求 **macOS 26+**。它基于当前的 SwiftUI 菜单栏和设置 API 构建，保持单一现代基线是小项目可靠性的前提。暂无支持旧版 macOS 的计划。
 - **哪个语言填哪里？** → 在**设置 → Language** 里选你的**母语**和**外语**（没有容易搞反的“源/目标”概念）。每个快捷键有自己的方向；**自动**会检测选中文字的语言并翻译成另一种。
 
 ## 🤝 参与贡献
@@ -190,4 +190,4 @@ cmake --build build             # → build/Saypick.exe
 
 ## 📄 许可证
 
-[MIT](LICENSE) · 为 macOS 和 Windows 用 ❤️ 打造。如果 Saypick 帮到了你，点个 ⭐️ 就是最好的支持！
+[MIT](LICENSE) · 为 macOS 和 Windows 用 ❤️ 打造。如果 TypeTide 帮到了你，点个 ⭐️ 就是最好的支持！

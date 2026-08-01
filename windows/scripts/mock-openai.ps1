@@ -1,7 +1,7 @@
 ﻿# 翻译后端 mock：
 #   POST */chat/completions → OpenAI 风格 SSE 流式
 #   POST /api/generate      → Ollama 风格 NDJSON 流式
-# 测试用：让 Saypick 的两种后端都有可对接的本地端点。
+# 测试用：让 TypeTide 的两种后端都有可对接的本地端点。
 # 用法: .\mock-openai.ps1 [-Port 8199] [-Reply "TRANSLATED_TEXT"]
 param(
     [int]$Port = 8199,

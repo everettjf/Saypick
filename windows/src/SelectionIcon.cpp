@@ -4,7 +4,7 @@
 #include <algorithm>
 
 namespace {
-constexpr wchar_t kClassName[] = L"SaypickSelectionIcon";
+constexpr wchar_t kClassName[] = L"TypeTideSelectionIcon";
 constexpr UINT_PTR kAutoHideTimer = 1;
 constexpr BYTE kAccentRed = 0x7C;
 constexpr BYTE kAccentGreen = 0x5C;

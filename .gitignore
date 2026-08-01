@@ -7,8 +7,8 @@ build/
 *.pkg
 
 # Xcode
-macos/Saypick.xcodeproj/project.xcworkspace/xcuserdata
-macos/Saypick.xcodeproj/project.xcworkspace/xcshareddata
+macos/TypeTide.xcodeproj/project.xcworkspace/xcuserdata
+macos/TypeTide.xcodeproj/project.xcworkspace/xcshareddata
 *.xcuserstate
 xcuserdata/
 DerivedData/

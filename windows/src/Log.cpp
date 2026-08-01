@@ -8,7 +8,7 @@ void Log(const char* fmt, ...) {
     static int enabled = -1;
     if (enabled < 0) {
         wchar_t buf[8]{};
-        enabled = GetEnvironmentVariableW(L"SAYPICK_DEBUG", buf, 8) > 0 ? 1 : 0;
+        enabled = GetEnvironmentVariableW(L"TYPETIDE_DEBUG", buf, 8) > 0 ? 1 : 0;
     }
     if (!enabled) return;
 

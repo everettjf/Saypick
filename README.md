@@ -1,4 +1,4 @@
-<h1 align="center">Saypick</h1>
+<h1 align="center">TypeTide</h1>
 <p align="center"><b>System-wide AI translation &amp; inline rewrite for macOS &amp; Windows</b></p>
 
 <p align="center">
@@ -13,11 +13,11 @@
 
 <p align="center">
   <a href="https://everettjf.github.io/Saypick/">🌐 Website</a> ·
-  <a href="docs/blog/introducing-saypick.md">📝 Read the intro</a> ·
+  <a href="docs/blog/introducing-typetide.md">📝 Read the intro</a> ·
   <b>English</b> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-Saypick lives in your menu bar (macOS) or system tray (Windows) and works in **any** app. Two things, one shortcut each:
+TypeTide lives in your menu bar (macOS) or system tray (Windows) and works in **any** app. Two things, one shortcut each:
 
 - **Read** — select foreign text, hit a shortcut, and a translation pops up next to it.
 - **Write** — type in your own language, hit a shortcut, and it’s **rewritten in place** into the target language, ready to send.
@@ -48,14 +48,14 @@ Translation runs through a local model (**Ollama**) for full privacy, or any **O
 - **Works in every app** — uses the Accessibility API (macOS) / UI Automation (Windows) to read the selection, with a clipboard-copy fallback for Electron/web apps, so it works even where text APIs don’t. The original clipboard is always restored.
 - **Undo-safe replacement** — replacements are pasted, preserving each app’s native undo stack.
 - **Local or cloud** — pluggable backends: **Ollama** (offline, private) or any **OpenAI-compatible** API (`/chat/completions`, streaming). Switch in Settings.
-- **Model picker** — Settings lists your installed Ollama models; if the configured model isn't installed, Saypick auto-selects one so it works out of the box. Thinking models (qwen3 family, …) are handled — hidden reasoning is disabled so translations stay instant.
+- **Model picker** — Settings lists your installed Ollama models; if the configured model isn't installed, TypeTide auto-selects one so it works out of the box. Thinking models (qwen3 family, …) are handled — hidden reasoning is disabled so translations stay instant.
 - **Styles** — Faithful, Formal, Casual, or Polished, independently for read and rewrite.
 - **Menu-bar / tray only** — no Dock or taskbar clutter. Global shortcuts, launch at login, per-app skip list.
 - **Native on both platforms** — SwiftUI on macOS, Win32 C++ on Windows. No Electron, no runtime.
 
-## 💡 Why Saypick
+## 💡 Why TypeTide
 
-| | Saypick | Browser translate sites | OS built-in translate |
+| | TypeTide | Browser translate sites | OS built-in translate |
 |---|---|---|---|
 | Works in any app (mail, chat, IDE, terminal) | ✅ | ❌ (paste in/out) | ⚠️ menu only |
 | Rewrite **in place** for replies | ✅ | ❌ | ❌ |
@@ -81,21 +81,21 @@ ollama serve             # usually already running as a service
 OpenAI, OpenRouter, and DeepSeek plus a custom OpenAI-compatible endpoint; API keys are
 kept in Windows Credential Manager rather than the settings JSON.
 
-Saypick lists your installed models in **Settings → Backend** and auto-picks an installed one if the configured model is missing — pulling *any* chat model is enough to get going.
+TypeTide lists your installed models in **Settings → Backend** and auto-picks an installed one if the configured model is missing — pulling *any* chat model is enough to get going.
 
-**2. Install Saypick**
+**2. Install TypeTide**
 
 macOS — with [Homebrew](https://brew.sh) (recommended):
 ```bash
-brew install --cask everettjf/saypick/saypick
+brew install --cask everettjf/saypick/typetide
 ```
 …or download the latest `.dmg` from [Releases](../../releases), drag it to Applications, and launch it. The build is signed and notarized by Apple.
 
-Windows — download and run the latest `Saypick-Setup-x.y.z.exe` installer from [Releases](../../releases) (per-user, no admin needed; a portable `Saypick-Windows-x.y.z.zip` is also available). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
+Windows — download and run the latest `TypeTide-Setup-x.y.z.exe` installer from [Releases](../../releases) (per-user, no admin needed; a portable `TypeTide-Windows-x.y.z.zip` is also available). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
 
 **3. First run**
 
-macOS: allow Saypick under **System Settings → Privacy & Security → Accessibility** (required to read selections and replace text). Windows needs no special permission. Then:
+macOS: allow TypeTide under **System Settings → Privacy & Security → Accessibility** (required to read selections and replace text). Windows needs no special permission. Then:
 
 - Select text → **⌥D** (macOS) / **Alt+D** (Windows) → see the translation.
 - Type in your language → **⌥R** / **Alt+R** → it’s rewritten in place.
@@ -125,7 +125,7 @@ Select / type  ─►  Shortcut · floating icon · auto
 
 ```
 macos/                 # SwiftUI app (Xcode project)
-├── Saypick/
+├── TypeTide/
 │   ├── Core/          # SelectionCapture, TextReplacer, TriggerController,
 │   │                  # SelectionMonitor, PopupPositioner, LaunchAtLogin, …
 │   ├── Translation/   # TranslationProvider, Ollama / OpenAI providers,
@@ -149,10 +149,10 @@ docs/                  # GitHub Pages site + blog + screenshots
 macOS:
 ```bash
 cd macos
-open Saypick.xcodeproj          # ⌘R to run
+open TypeTide.xcodeproj          # ⌘R to run
 
 # Signed release + notarized DMG (export APPLE_ID, APPLE_SPECIFIC_PASSWORD, APPLE_TEAM_ID first)
-./scripts/build-release.sh      # → build/Saypick-x.y.z.dmg
+./scripts/build-release.sh      # → build/TypeTide-x.y.z.dmg
 ```
 
 Requirements: macOS 26+, Xcode 15+. The app is **not** sandboxed (it needs Accessibility + synthetic key events). For local dev builds, sign with your Apple Development team so the Accessibility grant persists across rebuilds.
@@ -161,7 +161,7 @@ Windows:
 ```powershell
 cd windows
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build             # → build/Saypick.exe
+cmake --build build             # → build/TypeTide.exe
 ```
 
 Requirements: Windows 10+, Visual Studio 2022+ (MSVC, CMake, Ninja). No third-party dependencies — pure Win32 + WinHTTP + UI Automation. See [windows/README.md](windows/README.md) for architecture and the test harness.
@@ -179,11 +179,11 @@ Whichever platform releases first creates the `vX.Y.Z` tag; the other uploads it
 
 ## 🔧 Troubleshooting
 
-- **Shortcut does nothing** → macOS: confirm Accessibility is granted (Settings → General shows *Granted*) and Saypick is enabled in the menu bar. Windows: another app may own the hotkey — pick a different one in Settings → Shortcuts.
-- **No translation** → Ollama: is `ollama serve` running and the model installed? (Saypick auto-picks an installed model if your configured one is missing.) OpenAI: check base URL / key / model.
-- **Translation is very slow on a qwen3-class model** → Saypick disables hidden “thinking”, preloads the selected model, and keeps it warm for 10 minutes. If it still crawls, the model may be too big for your hardware — try a smaller one from **Settings → Backend**.
+- **Shortcut does nothing** → macOS: confirm Accessibility is granted (Settings → General shows *Granted*) and TypeTide is enabled in the menu bar. Windows: another app may own the hotkey — pick a different one in Settings → Shortcuts.
+- **No translation** → Ollama: is `ollama serve` running and the model installed? (TypeTide auto-picks an installed model if your configured one is missing.) OpenAI: check base URL / key / model.
+- **Translation is very slow on a qwen3-class model** → TypeTide disables hidden “thinking”, preloads the selected model, and keeps it warm for 10 minutes. If it still crawls, the model may be too big for your hardware — try a smaller one from **Settings → Backend**.
 - **Misaligned popup in some apps** → those apps don’t expose text bounds; the popup falls back to the cursor position.
-- **“Can’t be opened on this Mac” on Sequoia or earlier** → Saypick requires **macOS 26+**. It’s built against the current SwiftUI menu-bar and Settings APIs, and keeping a single modern baseline is what lets a small project stay reliable. Support for older macOS isn’t planned right now.
+- **“Can’t be opened on this Mac” on Sequoia or earlier** → TypeTide requires **macOS 26+**. It’s built against the current SwiftUI menu-bar and Settings APIs, and keeping a single modern baseline is what lets a small project stay reliable. Support for older macOS isn’t planned right now.
 - **Which language goes where?** → In **Settings → Language**, pick your **native** and **foreign** language (there is no “source/target” pair to get backwards). Each shortcut has its own direction; **auto** detects the selected text and translates the other way.
 
 ## 🤝 Contributing
@@ -192,4 +192,4 @@ Issues and PRs welcome. Join the [Discord](https://discord.com/invite/eGzEaP6TzR
 
 ## 📄 License
 
-[MIT](LICENSE) · Made with ❤️ for macOS & Windows. If Saypick helps you, a ⭐️ is appreciated!
+[MIT](LICENSE) · Made with ❤️ for macOS & Windows. If TypeTide helps you, a ⭐️ is appreciated!
