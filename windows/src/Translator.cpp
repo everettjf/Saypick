@@ -286,7 +286,7 @@ StreamOutcome runOpenAI(const TranslationRequest& req, const BackendConfig& s, u
     if (!s.openAIKey.empty())
         headers += L"Authorization: Bearer " + util::Widen(s.openAIKey) + L"\r\n";
     if (base.find("openrouter.ai") != std::string::npos) {
-        headers += L"HTTP-Referer: https://everettjf.github.io/TypeTide/\r\n";
+        headers += L"HTTP-Referer: https://xnu.app/TypeTide/\r\n";
         headers += L"X-OpenRouter-Title: TypeTide\r\n";
     }
 

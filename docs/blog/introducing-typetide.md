@@ -82,4 +82,4 @@ It's **open source (MIT)**. If it saves you a few context switches a day, a ⭐�
 
 ---
 
-*TypeTide · system-wide AI translation & inline rewrite for macOS 26+. [Website](https://everettjf.github.io/TypeTide/) · [GitHub](https://github.com/everettjf/TypeTide) · [中文版](introducing-typetide.zh.md)*
+*TypeTide · system-wide AI translation & inline rewrite for macOS 26+. [Website](https://xnu.app/TypeTide/) · [GitHub](https://github.com/everettjf/TypeTide) · [中文版](introducing-typetide.zh.md)*

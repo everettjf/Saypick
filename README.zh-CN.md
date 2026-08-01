@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://everettjf.github.io/TypeTide/">🌐 官网</a> ·
+  <a href="https://xnu.app/TypeTide/">🌐 官网</a> ·
   <a href="docs/blog/introducing-typetide.md">📝 项目介绍</a> ·
   <a href="README.md">English</a> · <b>简体中文</b>
 </p>

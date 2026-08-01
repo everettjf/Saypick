@@ -104,4 +104,4 @@ TypeTide 对后端不挑食，内置两种可插拔的 provider：
 
 ---
 
-*TypeTide · 面向 macOS 26+ 的系统级 AI 翻译与就地改写。[官网](https://everettjf.github.io/TypeTide/) · [GitHub](https://github.com/everettjf/TypeTide) · [English version](introducing-typetide.md)*
+*TypeTide · 面向 macOS 26+ 的系统级 AI 翻译与就地改写。[官网](https://xnu.app/TypeTide/) · [GitHub](https://github.com/everettjf/TypeTide) · [English version](introducing-typetide.md)*
