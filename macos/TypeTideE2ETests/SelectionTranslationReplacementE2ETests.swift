@@ -51,6 +51,7 @@ final class SelectionTranslationReplacementE2ETests: XCTestCase {
         let model = try XCTUnwrap(PopupController.shared.currentModel)
         try await waitUntil { model.translation == "MOCK_TRANSLATION_OK" }
         XCTAssertEqual(model.translation, "MOCK_TRANSLATION_OK")
+        try await waitUntil { model.tidePhase == .complete }
 
         model.onReplace?()
         try await waitUntil { editor.string.contains("MOCK_TRANSLATION_OK") }

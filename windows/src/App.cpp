@@ -423,6 +423,8 @@ LRESULT App::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 PopupWindow::shared().setError(done->error);
             else if (util::Trim(PopupWindow::shared().translation()).empty())
                 PopupWindow::shared().setError(L"No translation returned");
+            else
+                PopupWindow::shared().finishTranslation();
         }
         delete done;
         return 0;

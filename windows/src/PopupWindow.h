@@ -17,6 +17,8 @@ public:
     void show(const std::wstring& original, Language target, RECT anchor, bool showReplace);
 
     void appendDelta(const std::wstring& delta);
+    /// 流结束：完成最后一次潮汐扫过；空结果由 App 转成错误。
+    void finishTranslation();
     void setError(const std::wstring& error);
     void setTarget(Language target);
     /// 重新进入 loading（重定向语言后重新翻译）
@@ -64,6 +66,11 @@ private:
     bool loading_ = true;
     Language target_ = Language::English;
     bool copiedFlash_ = false;
+    enum class TidePhase { Waiting, Flowing, Settling, Complete, Failed };
+    TidePhase tidePhase_ = TidePhase::Waiting;
+    bool animationsEnabled_ = true;
+    unsigned tideTick_ = 0;
+    unsigned settleTicks_ = 0;
     int width_ = 420;
     int textHeight_ = 0;
     int viewportHeight_ = 0;

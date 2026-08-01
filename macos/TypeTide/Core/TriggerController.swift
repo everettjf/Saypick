@@ -141,23 +141,22 @@ final class TriggerController {
             guard let self, let model else { return }
             self.runTranslationStream(text: text, from: from, to: to, style: style, into: model)
         }
-        model.translation = ""
-        model.isLoading = true
-        model.errorText = nil
+        model.resetTranslation()
         streamTask = Task { @MainActor in
             do {
                 for try await delta in TranslationService.shared.stream(text: text, from: from, to: to, style: style) {
                     if Task.isCancelled { return }
-                    model.translation += delta
-                    model.isLoading = false
+                    model.appendTranslation(delta)
                 }
-                model.isLoading = false
+                model.finishTranslation()
                 if model.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    model.errorText = "No translation returned"
+                    model.failTranslation("No translation returned")
+                } else {
+                    try? await Task.sleep(for: .milliseconds(420))
+                    if !Task.isCancelled { model.finishTide() }
                 }
             } catch {
-                model.isLoading = false
-                model.errorText = (error as? TranslationError)?.errorDescription ?? error.localizedDescription
+                model.failTranslation((error as? TranslationError)?.errorDescription ?? error.localizedDescription)
             }
         }
     }
@@ -199,8 +198,7 @@ final class TriggerController {
                 } catch {
                     let anchor = PopupPositioner.anchorRect(element: cap.element, range: cap.selectedRange)
                     let model = PopupController.shared.show(original: cap.text, target: dir.to, anchor: anchor, onReplace: nil)
-                    model.isLoading = false
-                    model.errorText = (error as? TranslationError)?.errorDescription ?? error.localizedDescription
+                    model.failTranslation((error as? TranslationError)?.errorDescription ?? error.localizedDescription)
                 }
             }
         }

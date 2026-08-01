@@ -5,11 +5,13 @@
 #include <dwmapi.h>
 #include <windowsx.h>
 #include <algorithm>
+#include <cmath>
 
 namespace {
 
 constexpr wchar_t kClassName[] = L"TypeTidePopup";
 constexpr UINT_PTR kCopiedTimer = 1;
+constexpr UINT_PTR kTideTimer = 2;
 
 // 品牌紫（与 README badge 一致）
 constexpr COLORREF kAccent = RGB(0x7C, 0x5C, 0xFF);
@@ -63,6 +65,11 @@ void PopupWindow::show(const std::wstring& original, Language target, RECT ancho
     error_.clear();
     loading_ = true;
     copiedFlash_ = false;
+    tidePhase_ = TidePhase::Waiting;
+    tideTick_ = settleTicks_ = 0;
+    BOOL clientAnimations = TRUE;
+    SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &clientAnimations, 0);
+    animationsEnabled_ = clientAnimations == TRUE;
     scrollY_ = 0;
     target_ = target;
     anchor_ = anchor;
@@ -99,11 +106,13 @@ void PopupWindow::show(const std::wstring& original, Language target, RECT ancho
     placedAbove_ = false;
     layoutAndResize();
     ShowWindow(hwnd_, SW_SHOWNOACTIVATE);
+    if (animationsEnabled_) SetTimer(hwnd_, kTideTimer, 33, nullptr);
     installDismissMonitors();
 }
 
 void PopupWindow::close() {
     if (!hwnd_) return;
+    KillTimer(hwnd_, kTideTimer);
     removeDismissMonitors();
     HWND h = hwnd_;
     hwnd_ = nullptr;
@@ -115,14 +124,30 @@ void PopupWindow::appendDelta(const std::wstring& delta) {
     if (!hwnd_) return;
     translation_ += delta;
     loading_ = false;
+    tidePhase_ = animationsEnabled_ ? TidePhase::Flowing : TidePhase::Complete;
     layoutAndResize();
     InvalidateRect(hwnd_, nullptr, TRUE);
+}
+
+void PopupWindow::finishTranslation() {
+    if (!hwnd_ || translation_.empty()) return;
+    loading_ = false;
+    if (animationsEnabled_) {
+        tidePhase_ = TidePhase::Settling;
+        settleTicks_ = 0;
+        SetTimer(hwnd_, kTideTimer, 33, nullptr);
+    } else {
+        tidePhase_ = TidePhase::Complete;
+    }
+    InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
 void PopupWindow::setError(const std::wstring& error) {
     if (!hwnd_) return;
     error_ = error;
     loading_ = false;
+    tidePhase_ = TidePhase::Failed;
+    KillTimer(hwnd_, kTideTimer);
     layoutAndResize();
     InvalidateRect(hwnd_, nullptr, TRUE);
 }
@@ -137,6 +162,9 @@ void PopupWindow::resetForRetranslate() {
     translation_.clear();
     error_.clear();
     loading_ = true;
+    tidePhase_ = TidePhase::Waiting;
+    tideTick_ = settleTicks_ = 0;
+    if (animationsEnabled_) SetTimer(hwnd_, kTideTimer, 33, nullptr);
     layoutAndResize();
     InvalidateRect(hwnd_, nullptr, TRUE);
 }
@@ -175,7 +203,7 @@ void PopupWindow::layoutAndResize() {
     HDC dc = GetDC(hwnd_);
     HFONT old = (HFONT)SelectObject(dc, fontBody_);
     std::wstring bodyText = !error_.empty() ? error_
-                          : (translation_.empty() && loading_) ? L"Translating…"
+                          : (translation_.empty() && loading_) ? original_
                           : translation_;
     RECT rc{0, 0, contentW, 0};
     DrawTextW(dc, bodyText.c_str(), -1, &rc, DT_WORDBREAK | DT_CALCRECT);
@@ -317,13 +345,51 @@ void PopupWindow::paint(HDC dc) {
         DrawTextW(dc, msg.c_str(), -1, &rcText, DT_WORDBREAK | DT_NOPREFIX);
     } else if (translation_.empty() && loading_) {
         SetTextColor(dc, th.secondary);
-        DrawTextW(dc, L"Translating…", -1, &rcText, DT_WORDBREAK);
+        DrawTextW(dc, original_.c_str(), -1, &rcText,
+                  DT_WORDBREAK | DT_NOPREFIX | DT_EDITCONTROL);
     } else {
         SetTextColor(dc, th.text);
         DrawTextW(dc, translation_.c_str(), -1, &rcText,
                   DT_WORDBREAK | DT_NOPREFIX | DT_EDITCONTROL);
     }
     RestoreDC(dc, saved);
+
+    // 点阵潮汐：等待/流式输出时循环，完成时快速扫过一次后停下。
+    const bool tideActive = animationsEnabled_ &&
+        (tidePhase_ == TidePhase::Waiting || tidePhase_ == TidePhase::Flowing ||
+         tidePhase_ == TidePhase::Settling);
+    if (tideActive && clipText.right > clipText.left) {
+        saved = SaveDC(dc);
+        IntersectClipRect(dc, clipText.left, clipText.top, clipText.right, clipText.bottom);
+        const int span = std::max(1, clipText.right - clipText.left + px(90));
+        const unsigned speed = tidePhase_ == TidePhase::Settling ? 11u : 4u;
+        const int frontier = clipText.left - px(22) + (int)((tideTick_ * speed) % (unsigned)span);
+        HPEN oldPen = (HPEN)SelectObject(dc, GetStockObject(NULL_PEN));
+        for (int i = 0; i < 32; ++i) {
+            const int row = i % 7;
+            const int trail = i / 7;
+            const int x = frontier - px(trail * 13) - px((row % 2) * 4);
+            const double wave = std::sin((double)tideTick_ * 0.14 + i * 0.72) * px(5);
+            const int y = clipText.top + row * std::max(1, (clipText.bottom - clipText.top - px(5)) / 6)
+                          + (int)wave;
+            const int radius = px(1 + ((i * 7) % 3));
+            COLORREF color = (i % 3 == 0)
+                ? (dark_ ? RGB(0x39, 0xD9, 0xE8) : RGB(0x00, 0x9E, 0xC4))
+                : (dark_ ? RGB(0x98, 0x83, 0xFF) : RGB(0x6B, 0x4B, 0xE8));
+            HBRUSH dot = CreateSolidBrush(color);
+            HBRUSH old = (HBRUSH)SelectObject(dc, dot);
+            Ellipse(dc, x - radius, y - radius, x + radius + 1, y + radius + 1);
+            SelectObject(dc, old);
+            DeleteObject(dot);
+        }
+        SelectObject(dc, oldPen);
+        RestoreDC(dc, saved);
+    } else if (!animationsEnabled_ && loading_) {
+        SelectObject(dc, fontSmall_);
+        SetTextColor(dc, th.secondary);
+        RECT progress{clipText.left, clipText.bottom - px(18), clipText.right, clipText.bottom};
+        DrawTextW(dc, L"Translating…", -1, &progress, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+    }
     if (textHeight_ > viewportHeight_) {
         const int trackTop = headerH + 1 + padY;
         const int trackH = viewportHeight_;
@@ -500,6 +566,13 @@ LRESULT PopupWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         if (wp == kCopiedTimer) {
             KillTimer(hwnd_, kCopiedTimer);
             copiedFlash_ = false;
+            if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
+        } else if (wp == kTideTimer) {
+            ++tideTick_;
+            if (tidePhase_ == TidePhase::Settling && ++settleTicks_ >= 15) {
+                tidePhase_ = TidePhase::Complete;
+                KillTimer(hwnd_, kTideTimer);
+            }
             if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
         }
         return 0;

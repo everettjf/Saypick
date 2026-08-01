@@ -11,10 +11,19 @@ import Combine
 
 @MainActor
 final class TranslationPopupModel: ObservableObject {
+    enum TidePhase: Equatable {
+        case waiting
+        case flowing
+        case settling
+        case complete
+        case failed
+    }
+
     @Published var original: String
     @Published var translation: String = ""
     @Published var isLoading: Bool = true
     @Published var errorText: String?
+    @Published private(set) var tidePhase: TidePhase = .waiting
     /// 当前目标语言（弹窗顶部可改选，触发 onRetarget 重新翻译）
     @Published var targetLanguage: Language
 
@@ -31,10 +40,41 @@ final class TranslationPopupModel: ObservableObject {
         self.original = original
         self.targetLanguage = target
     }
+
+    func resetTranslation() {
+        translation = ""
+        isLoading = true
+        errorText = nil
+        tidePhase = .waiting
+    }
+
+    func appendTranslation(_ delta: String) {
+        guard !delta.isEmpty else { return }
+        translation += delta
+        isLoading = false
+        tidePhase = .flowing
+    }
+
+    func finishTranslation() {
+        isLoading = false
+        tidePhase = translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? .failed : .settling
+    }
+
+    func finishTide() {
+        if tidePhase == .settling { tidePhase = .complete }
+    }
+
+    func failTranslation(_ message: String) {
+        isLoading = false
+        errorText = message
+        tidePhase = .failed
+    }
 }
 
 struct TranslationPopupView: View {
     @ObservedObject var model: TranslationPopupModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -127,19 +167,8 @@ struct TranslationPopupView: View {
                         }
                     }
                 }
-            } else if model.translation.isEmpty && model.isLoading {
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("Translating…")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                }
             } else {
-                Text(model.translation)
-                    .font(.system(size: 14))
-                    .foregroundColor(.primary)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
+                TideTranslationText(model: model, reduceMotion: reduceMotion)
             }
 
             if !model.translation.isEmpty && model.errorText == nil {
@@ -170,5 +199,92 @@ struct TranslationPopupView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct TideTranslationText: View {
+    @ObservedObject var model: TranslationPopupModel
+    let reduceMotion: Bool
+
+    private var isMoving: Bool {
+        switch model.tidePhase {
+        case .waiting, .flowing, .settling: true
+        case .complete, .failed: false
+        }
+    }
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Group {
+                if model.translation.isEmpty {
+                    Text(model.original)
+                        .foregroundStyle(.secondary.opacity(0.48))
+                } else {
+                    Text(model.translation)
+                        .foregroundStyle(.primary)
+                        .textSelection(.enabled)
+                        .transition(.opacity)
+                }
+            }
+            .font(.system(size: 14))
+            .fixedSize(horizontal: false, vertical: true)
+
+            if isMoving {
+                if reduceMotion {
+                    HStack {
+                        Spacer()
+                        ProgressView().controlSize(.small)
+                    }
+                } else {
+                    TideParticleWave(phase: model.tidePhase)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .frame(minHeight: 24)
+        .animation(reduceMotion ? .easeOut(duration: 0.16) : .easeInOut(duration: 0.28),
+                   value: model.translation.isEmpty)
+    }
+}
+
+private struct TideParticleWave: View {
+    let phase: TranslationPopupModel.TidePhase
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            Canvas { graphics, size in
+                guard size.width > 0, size.height > 0 else { return }
+                let seconds = context.date.timeIntervalSinceReferenceDate
+                let speed = phase == .settling ? 1.8 : 0.78
+                let progress = (seconds * speed).truncatingRemainder(dividingBy: 1.0)
+                let frontier = CGFloat(progress) * (size.width + 70) - 24
+
+                for index in 0..<32 {
+                    let row = index % 7
+                    let trail = index / 7
+                    let x = frontier - CGFloat(trail * 13) - CGFloat(row % 2) * 4
+                    let normalizedRow = CGFloat(row) / 6
+                    let wave = sin(CGFloat(seconds * 4.2) + CGFloat(index) * 0.72) * 5
+                    let y = normalizedRow * max(1, size.height - 6) + 3 + wave
+                    guard x > -8, x < size.width + 8 else { continue }
+
+                    let radius = CGFloat(1.2 + Double((index * 7) % 5) * 0.27)
+                    let fade = max(0.15, 0.78 - Double(trail) * 0.13)
+                    let color = index.isMultiple(of: 3)
+                        ? Color.cyan.opacity(fade)
+                        : Color.indigo.opacity(fade)
+                    graphics.fill(
+                        Path(ellipseIn: CGRect(x: x - radius, y: y - radius,
+                                              width: radius * 2, height: radius * 2)),
+                        with: .color(color)
+                    )
+                }
+            }
+        }
+        .mask(
+            LinearGradient(colors: [.clear, .white, .white, .clear],
+                           startPoint: .leading, endPoint: .trailing)
+        )
     }
 }
