@@ -39,7 +39,10 @@ private struct MenuBarIconLabel: View {
         Image(nsImage: BrandIcon.templateImage)
             .resizable()
             .scaledToFit()
-            .frame(width: 13, height: 13)
+            // MenuBarExtra keeps its own horizontal padding. Keeping the mark
+            // close to the native menu-bar glyph width avoids a tiny, flattened
+            // mark floating inside an otherwise unchanged status-item hit area.
+            .frame(width: 18, height: 16)
             .onAppear { SettingsOpener.handler = { openSettings() } }
     }
 }
