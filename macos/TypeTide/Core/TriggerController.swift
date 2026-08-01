@@ -76,12 +76,27 @@ final class TriggerController {
     // MARK: - 读·划词翻译
 
     func handleRead() {
-        guard AppSettings.isEnabled, AccessibilityPermission.isGranted,
-              !AppSettings.shouldSkipFrontmostApplication() else { return }
+        guard AppSettings.isEnabled else { return }
+        guard AccessibilityPermission.isGranted else {
+            AccessibilityPermission.requestAndOpenSystemSettings()
+            return
+        }
+        guard !AppSettings.shouldSkipFrontmostApplication() else { return }
         Task { @MainActor in
-            guard let cap = await SelectionCapture.readSelection() else { return }
+            guard let cap = await SelectionCapture.readSelection() else {
+                presentCaptureFailure("Couldn’t read the selected text. Select some text and try again.")
+                return
+            }
             presentRead(text: cap.text, element: cap.element, range: cap.range)
         }
+    }
+
+    private func presentCaptureFailure(_ message: String) {
+        let mouse = NSEvent.mouseLocation
+        let anchor = NSRect(x: mouse.x, y: mouse.y, width: 1, height: 1)
+        let model = PopupController.shared.show(original: "No selection", target: nativeLanguage,
+                                                anchor: anchor, onReplace: nil)
+        model.failTranslation(message)
     }
 
     /// 显示读翻译弹窗并流式填充（供快捷键 / 图标 / 自动模式共用）。
@@ -164,8 +179,12 @@ final class TriggerController {
     // MARK: - 写·输入改写
 
     func handleRewrite() {
-        guard AppSettings.isEnabled, AccessibilityPermission.isGranted,
-              !AppSettings.shouldSkipFrontmostApplication() else { return }
+        guard AppSettings.isEnabled else { return }
+        guard AccessibilityPermission.isGranted else {
+            AccessibilityPermission.requestAndOpenSystemSettings()
+            return
+        }
+        guard !AppSettings.shouldSkipFrontmostApplication() else { return }
         rewriteTask?.cancel()
         rewriteTask = Task { @MainActor [self] in
             guard let cap = await SelectionCapture.captureForRewrite() else { return }

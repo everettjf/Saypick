@@ -7,6 +7,7 @@
 
 import AppKit
 import Carbon
+import OSLog
 
 struct KeyboardShortcutPreference: Codable, Equatable {
     var keyCode: Int
@@ -47,6 +48,8 @@ struct KeyboardShortcutPreference: Codable, Equatable {
 
 final class GlobalShortcutCenter {
     static let shared = GlobalShortcutCenter()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.xnu.typetide",
+                                category: "GlobalShortcuts")
 
     private var hotKeyRefs: [UInt32: EventHotKeyRef] = [:]
     private var handlers: [UInt32: () -> Void] = [:]
@@ -71,8 +74,10 @@ final class GlobalShortcutCenter {
                                          &ref)
         if status == noErr, let ref {
             hotKeyRefs[id] = ref
+            logger.notice("Registered shortcut id=\(id) as \(shortcut.displayString, privacy: .public)")
         } else {
             handlers[id] = nil
+            logger.error("Failed to register shortcut id=\(id), status=\(status)")
         }
     }
 
@@ -99,6 +104,7 @@ final class GlobalShortcutCenter {
             var hkID = EventHotKeyID()
             GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
                               nil, MemoryLayout<EventHotKeyID>.size, nil, &hkID)
+            manager.logger.notice("Received shortcut id=\(hkID.id)")
             manager.handlers[hkID.id]?()
             return noErr
         }, 1, &eventSpec, selfPointer, &eventHandler)
