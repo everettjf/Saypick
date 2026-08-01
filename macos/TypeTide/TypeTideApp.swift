@@ -2,7 +2,7 @@
 //  TypeTideApp.swift
 //  TypeTide
 //
-//  纯菜单栏 App：MenuBarExtra + Settings 场景。
+//  纯菜单栏 App：紧凑 AppKit 状态项 + SwiftUI Settings 场景。
 //
 
 import SwiftUI
@@ -15,13 +15,6 @@ struct TypeTideApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        MenuBarExtra {
-            MenuBarView()
-        } label: {
-            MenuBarIconLabel()
-        }
-        .menuBarExtraStyle(.menu)
-
         Settings {
             SettingsView()
         }
@@ -30,59 +23,42 @@ struct TypeTideApp: App {
     }
 }
 
-/// 菜单栏图标。顺带把 SwiftUI 的 openSettings 动作桥接给 AppKit 侧，
-/// 供 AppDelegate 在“用户双击已运行的 App”等场景打开设置窗口。
-private struct MenuBarIconLabel: View {
-    @Environment(\.openSettings) private var openSettings
-
-    var body: some View {
-        Image(nsImage: BrandIcon.templateImage)
-            .resizable()
-            .scaledToFit()
-            // MenuBarExtra keeps its own horizontal padding. Keeping the mark
-            // close to the native menu-bar glyph width avoids a tiny, flattened
-            // mark floating inside an otherwise unchanged status-item hit area.
-            .frame(width: 18, height: 16)
-            .onAppear { SettingsOpener.handler = { openSettings() } }
-    }
-}
-
 /// 从 AppKit 代码打开 SwiftUI Settings 场景的桥。
 @MainActor
 enum SettingsOpener {
-    static var handler: (@MainActor () -> Void)?
+    private static var windowController: NSWindowController?
 
     static func open() {
         NSApp.activate(ignoringOtherApps: true)
-        if let handler {
-            handler()
-        } else {
-            // 兜底：MenuBarExtra 场景尚未就绪时尝试旧的 AppKit 入口
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        if windowController == nil {
+            let host = NSHostingController(rootView: SettingsView())
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 780, height: 500),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "TypeTide Settings"
+            window.contentViewController = host
+            window.isReleasedWhenClosed = false
+            window.setFrameAutosaveName("TypeTideSettingsWindow")
+            window.center()
+            windowController = NSWindowController(window: window)
         }
-        // accessory App 打开的设置窗口可能落在别的 App 后面（#3）：
-        // 等场景装配一拍后显式置前。
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            NSApp.activate(ignoringOtherApps: true)
-            settingsWindow()?.makeKeyAndOrderFront(nil)
-        }
-    }
-
-    /// SwiftUI Settings 场景的窗口（identifier 以 com_apple_SwiftUI_Settings 开头）。
-    private static func settingsWindow() -> NSWindow? {
-        NSApp.windows.first {
-            $0.identifier?.rawValue.hasPrefix("com_apple_SwiftUI_Settings") == true
-        }
+        windowController?.showWindow(nil)
+        windowController?.window?.makeKeyAndOrderFront(nil)
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let firstLaunchKey = "hasCompletedFirstLaunch"
+    private var statusItem: NSStatusItem?
+    private let statusMenu = NSMenu()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 纯菜单栏：不在 Dock 显示
         NSApp.setActivationPolicy(.accessory)
+        installCompactStatusItem()
 
         // 监控/分析
         TelemetryDeck.initialize(config: .init(appID: "675A16AE-4E72-4AF8-A128-E1E416B5C3A0"))
@@ -111,7 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !UserDefaults.standard.bool(forKey: firstLaunchKey) {
             UserDefaults.standard.set(true, forKey: firstLaunchKey)
             Task { @MainActor in
-                // 等 MenuBarExtra 场景装配完成，openSettings 桥才可用
+                // 等 Settings 场景完成注册
                 try? await Task.sleep(nanoseconds: 500_000_000)
                 SettingsOpener.open()
             }
@@ -131,6 +107,78 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !flag { SettingsOpener.open() }
         return true
     }
+
+    /// SwiftUI MenuBarExtra 在 macOS 26 会强制使用约 50×34 pt 的 Liquid Glass
+    /// 容器。NSStatusItem.squareLength 保持与 Wi-Fi、电池等系统项一致的紧凑宽度。
+    private func installCompactStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        if let button = item.button {
+            let image = BrandIcon.templateImage.copy() as? NSImage ?? BrandIcon.templateImage
+            image.size = NSSize(width: 16, height: 16)
+            image.isTemplate = true
+            button.image = image
+            button.imageScaling = .scaleProportionallyDown
+            button.toolTip = "TypeTide"
+        }
+        statusMenu.autoenablesItems = false
+        statusMenu.delegate = self
+        item.menu = statusMenu
+        statusItem = item
+        rebuildStatusMenu()
+    }
+
+    private func rebuildStatusMenu() {
+        statusMenu.removeAllItems()
+
+        if UpdateChecker.shared.hasNewVersion {
+            let update = NSMenuItem(title: "New update available", action: #selector(openUpdate), keyEquivalent: "")
+            update.target = self
+            update.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil)
+            statusMenu.addItem(update)
+            statusMenu.addItem(.separator())
+        }
+
+        let enabled = NSMenuItem(title: AppSettings.isEnabled ? "TypeTide is On" : "TypeTide is Off",
+                                 action: #selector(toggleEnabled), keyEquivalent: "")
+        enabled.target = self
+        enabled.state = AppSettings.isEnabled ? .on : .off
+        statusMenu.addItem(enabled)
+        statusMenu.addItem(.separator())
+
+        let read = NSMenuItem(title: "Translate selection:  \(AppSettings.readShortcut.displayString)",
+                              action: nil, keyEquivalent: "")
+        read.isEnabled = false
+        statusMenu.addItem(read)
+        let rewrite = NSMenuItem(title: "Rewrite & replace:    \(AppSettings.rewriteShortcut.displayString)",
+                                 action: nil, keyEquivalent: "")
+        rewrite.isEnabled = false
+        statusMenu.addItem(rewrite)
+        statusMenu.addItem(.separator())
+
+        let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settings.keyEquivalentModifierMask = [.command]
+        settings.target = self
+        settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
+        statusMenu.addItem(settings)
+
+        let quit = NSMenuItem(title: "Quit TypeTide", action: #selector(quitApp), keyEquivalent: "q")
+        quit.keyEquivalentModifierMask = [.command]
+        quit.target = self
+        quit.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
+        statusMenu.addItem(quit)
+    }
+
+    @objc private func toggleEnabled() {
+        AppSettings.isEnabled.toggle()
+        TriggerController.shared.applyEnabledState()
+        rebuildStatusMenu()
+    }
+
+    @objc private func openUpdate() { UpdateChecker.shared.openReleasesPage() }
+    @objc private func openSettings() { SettingsOpener.open() }
+    @objc private func quitApp() { NSApp.terminate(nil) }
+
+    func menuWillOpen(_ menu: NSMenu) { rebuildStatusMenu() }
 
 #if DEBUG
     /// README/开发演示入口：使用真实弹窗和真实动画状态机，不触碰用户选区或剪贴板。
