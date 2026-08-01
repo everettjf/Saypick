@@ -25,6 +25,11 @@ TypeTide lives in your menu bar (macOS) or system tray (Windows) and works in **
 Translation runs through a local model (**Ollama**) for full privacy, or any **OpenAI-compatible** endpoint for speed. No browser tab, no copy-paste into a translation site — your selection stays where it is, and (with Ollama) never leaves your machine.
 
 <p align="center">
+  <img src="docs/screenshots/tide-transition.gif" alt="TypeTide's particle tide sweeps across selected text while the translation streams in" width="760" />
+  <br/><sub><i>The TypeTide transition · a particle tide carries the original text into its streamed translation.</i></sub>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/rewrite.gif" alt="Type Chinese, press ⌥R, and it is rewritten into English in place" width="760" />
   <br/><sub><i>Write · type in your language, press <kbd>⌥R</kbd>, and it’s rewritten in place.</i></sub>
 </p>

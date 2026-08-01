@@ -25,7 +25,8 @@ final class PopupController {
 
     /// 在锚点附近显示弹窗，返回可写入流式结果的 model。
     @discardableResult
-    func show(original: String, target: Language, anchor: NSRect, onReplace: (() -> Void)?) -> TranslationPopupModel {
+    func show(original: String, target: Language, anchor: NSRect, onReplace: (() -> Void)?,
+              dismissOnInteraction: Bool = true) -> TranslationPopupModel {
         close()
 
         let model = TranslationPopupModel(original: original, target: target)
@@ -54,7 +55,7 @@ final class PopupController {
 #if DEBUG
         currentModel = model
 #endif
-        installDismissMonitors()
+        if dismissOnInteraction { installDismissMonitors() }
         return model
     }
 

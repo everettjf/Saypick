@@ -39,7 +39,7 @@ struct GeneralSettingsView: View {
                     if hasPermission {
                         Text("Granted").foregroundColor(.blue).fontWeight(.medium)
                     } else {
-                        Button("Grant Permission") { AccessibilityPermission.request() }
+                        Button("Grant Permission") { AccessibilityPermission.requestAndOpenSystemSettings() }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.small)
                     }
@@ -49,6 +49,9 @@ struct GeneralSettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         SettingsNote(text: "TypeTide needs Accessibility permission to read selected text and replace text in other apps.",
                                      symbol: "exclamationmark.triangle.fill", tint: .orange)
+                        Text("In System Settings, turn on TypeTide. If it is not listed, click + and select TypeTide from Applications.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         Button("Open System Settings") { AccessibilityPermission.openSystemSettings() }
                             .controlSize(.small)
                     }

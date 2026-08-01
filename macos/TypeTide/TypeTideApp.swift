@@ -92,6 +92,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 注册全局快捷键 + 划词触发
         TriggerController.shared.start()
 
+#if DEBUG
+        startTideDemoIfRequested()
+#endif
+
         // 若配置的 Ollama 模型未安装，自动挑一个已装模型（避免开箱即败）
         Task { @MainActor in
             await OllamaModelResolver.ensureValidDefault()
@@ -121,4 +125,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !flag { SettingsOpener.open() }
         return true
     }
+
+#if DEBUG
+    /// README/开发演示入口：使用真实弹窗和真实动画状态机，不触碰用户选区或剪贴板。
+    private func startTideDemoIfRequested() {
+        guard ProcessInfo.processInfo.arguments.contains("--demo-tide") else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(700))
+            let visible = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+            let anchor = NSRect(x: visible.midX - 190, y: visible.midY + 90, width: 380, height: 24)
+            let model = PopupController.shared.show(
+                original: "你好世界，今天天气很好。",
+                target: .english,
+                anchor: anchor,
+                onReplace: {},
+                dismissOnInteraction: false
+            )
+
+            try? await Task.sleep(for: .milliseconds(650))
+            for chunk in ["Hello", " world.", " The weather", " is lovely", " today."] {
+                model.appendTranslation(chunk)
+                try? await Task.sleep(for: .milliseconds(280))
+            }
+            model.finishTranslation()
+            try? await Task.sleep(for: .milliseconds(420))
+            model.finishTide()
+        }
+    }
+#endif
 }
