@@ -89,8 +89,10 @@ private struct SelectionIconView: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: BrandIcon.symbolName)
-                .font(.system(size: 14, weight: .semibold))
+            Image(nsImage: BrandIcon.templateImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 17, height: 17)
                 .foregroundColor(.white)
                 .frame(width: 28, height: 28)
                 .background(

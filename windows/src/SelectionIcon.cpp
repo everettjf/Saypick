@@ -1,4 +1,5 @@
 #include "SelectionIcon.h"
+#include "BrandMark.h"
 #include "Hooks.h"
 #include <dwmapi.h>
 #include <algorithm>
@@ -117,16 +118,10 @@ LRESULT SelectionIcon::handle(UINT msg, WPARAM wp, LPARAM lp) {
                                          brighten(kAccentBlue)));
         FillRect(dc, &rc, bg);
         DeleteObject(bg);
-        SetBkMode(dc, TRANSPARENT);
-        SetTextColor(dc, RGB(255, 255, 255));
         UINT dpi = GetDpiForWindow(hwnd_);
-        HFONT font = CreateFontW(-MulDiv(10, (int)dpi, 72), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
-                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                 CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-        HFONT old = (HFONT)SelectObject(dc, font);
-        DrawTextW(dc, L"文A", -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-        SelectObject(dc, old);
-        DeleteObject(font);
+        const int inset = MulDiv(4, (int)dpi, 96);
+        RECT mark{rc.left + inset, rc.top + inset, rc.right - inset, rc.bottom - inset};
+        brand::DrawMark(dc, mark, RGB(255, 255, 255));
         EndPaint(hwnd_, &ps);
         return 0;
     }

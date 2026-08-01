@@ -1,4 +1,5 @@
 #include "PopupWindow.h"
+#include "BrandMark.h"
 #include "Clipboard.h"
 #include "Hooks.h"
 #include "Util.h"
@@ -301,11 +302,10 @@ void PopupWindow::paint(HDC dc) {
 
     // ---- 头部 ----
     SelectObject(dc, fontHeader_);
-    SetTextColor(dc, kAccent);
-    RECT rcBrand{padX, 0, client.right, headerH};
-    DrawTextW(dc, L"❖", -1, &rcBrand, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    RECT rcMark{padX, px(8), padX + px(18), px(26)};
+    brand::DrawMark(dc, rcMark, kAccent);
     SetTextColor(dc, th.secondary);
-    rcBrand.left += px(16);
+    RECT rcBrand{rcMark.right + px(4), 0, client.right, headerH};
     DrawTextW(dc, L"TypeTide", -1, &rcBrand, DT_SINGLELINE | DT_VCENTER);
 
     // 目标语言 chip

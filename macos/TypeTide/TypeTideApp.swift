@@ -36,7 +36,10 @@ private struct MenuBarIconLabel: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        Image(systemName: BrandIcon.symbolName)
+        Image(nsImage: BrandIcon.templateImage)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 16, height: 16)
             .onAppear { SettingsOpener.handler = { openSettings() } }
     }
 }

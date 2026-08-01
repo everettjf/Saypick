@@ -94,8 +94,10 @@ struct TranslationPopupView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: BrandIcon.symbolName)
-                .font(.system(size: 13, weight: .semibold))
+            Image(nsImage: BrandIcon.templateImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 14, height: 14)
                 .foregroundColor(.blue.opacity(0.85))
             Text("TypeTide")
                 .font(.system(size: 12, weight: .semibold))

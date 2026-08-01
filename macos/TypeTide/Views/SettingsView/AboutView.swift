@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import AppKit
 import Ollama
 
 struct AboutView: View {
@@ -25,15 +26,10 @@ struct AboutView: View {
             Spacer()
 
             // App Icon
-            Image(systemName: BrandIcon.symbolName)
-                .font(.system(size: 80))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.blue, .purple],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 112, height: 112)
 
             // App Name and Version
             VStack(spacing: 8) {
