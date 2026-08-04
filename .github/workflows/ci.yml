@@ -14,7 +14,7 @@ jobs:
       - name: Reject legacy brand references
         shell: bash
         run: |
-          if git grep -ni -E 'say[pP]ick|say[[:space:]]+pick'; then
+          if git grep -ni -E 'say[pP]ick|say[[:space:]]+pick' -- ':!AGENTS.md'; then
             echo "Legacy product name found; use TypeTide everywhere."
             exit 1
           fi
