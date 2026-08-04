@@ -89,7 +89,7 @@ TypeTide 对后端不挑食，内置两种可插拔的 provider：
    ollama serve
    ```
    ……或在 **设置 → 后端** 选 *OpenAI 兼容*，粘贴你的 base URL、key 和模型名。
-2. **安装。** 从 [Releases](https://github.com/everettjf/TypeTide/releases) 下载最新的 `.dmg`，拖进 Applications。
+2. **安装。** 从 [Releases](https://github.com/everettjf/typetide/releases) 下载最新的 `.dmg`，拖进 Applications。
 3. **授予辅助功能权限。** 在 **系统设置 → 隐私与安全性 → 辅助功能** 里允许 TypeTide（这是它能读取选区、替换文字的前提）。然后：选中文字 → <kbd>⌥</kbd><kbd>D</kbd>，或打字 → <kbd>⌥</kbd><kbd>R</kbd>。
 
 快捷键、触发方式、风格、语言——全都可以在设置里调。
@@ -100,8 +100,8 @@ TypeTide 对后端不挑食，内置两种可插拔的 provider：
 
 我想让翻译感觉像一个 **系统功能**，而不是一个要去的"目的地"。不用开新标签页，不用复制粘贴来回倒腾，而且——当我离线、或处理一些隐私内容时——没有任何数据离开我的笔记本。TypeTide 就是这个：一个安静待在菜单栏里的小助手，把"去翻译一下这个"变成一次按键。
 
-它是 **开源的（MIT）**。如果它每天能帮你省下几次上下文切换，欢迎去 [GitHub](https://github.com/everettjf/TypeTide) 点个 ⭐️，也欢迎来 [Discord](https://discord.com/invite/eGzEaP6TzR) 聊聊问题和想法。
+它是 **开源的（MIT）**。如果它每天能帮你省下几次上下文切换，欢迎去 [GitHub](https://github.com/everettjf/typetide) 点个 ⭐️，也欢迎来 [Discord](https://discord.com/invite/eGzEaP6TzR) 聊聊问题和想法。
 
 ---
 
-*TypeTide · 面向 macOS 26+ 的系统级 AI 翻译与就地改写。[官网](https://xnu.app/TypeTide/) · [GitHub](https://github.com/everettjf/TypeTide) · [English version](introducing-typetide.md)*
+*TypeTide · 面向 macOS 26+ 的系统级 AI 翻译与就地改写。[官网](https://xnu.app/TypeTide/) · [GitHub](https://github.com/everettjf/typetide) · [English version](introducing-typetide.md)*

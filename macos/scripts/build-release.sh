@@ -228,7 +228,7 @@ codesign --verify --deep --strict "$APP_PATH" && success "App signature is valid
 
 
 echo "Open release site"
-open https://github.com/everettjf/TypeTide/releases
+open https://github.com/everettjf/typetide/releases
 
 # 完成
 echo ""

@@ -201,4 +201,4 @@ Issues and PRs welcome. Join the [Discord](https://discord.com/invite/eGzEaP6TzR
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=everettjf/TypeTide&type=Date)](https://star-history.com/#everettjf/TypeTide&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=everettjf/typetide&type=Date)](https://star-history.com/#everettjf/typetide&Date)

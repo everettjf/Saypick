@@ -69,7 +69,7 @@ Under the hood it's a focused, native Swift app: a `SelectionCapture` layer over
    ollama serve
    ```
    …or choose *OpenAI-compatible* in **Settings → Backend** and paste your base URL, key, and model.
-2. **Install.** Grab the latest `.dmg` from the [Releases](https://github.com/everettjf/TypeTide/releases) page and drag it to Applications.
+2. **Install.** Grab the latest `.dmg` from the [Releases](https://github.com/everettjf/typetide/releases) page and drag it to Applications.
 3. **Grant Accessibility.** Allow TypeTide under **System Settings → Privacy & Security → Accessibility** (it's what lets the app read selections and replace text). Then select text → <kbd>⌥</kbd><kbd>D</kbd>, or type → <kbd>⌥</kbd><kbd>R</kbd>.
 
 Everything — shortcuts, triggers, styles, languages — is configurable in Settings.
@@ -78,8 +78,8 @@ Everything — shortcuts, triggers, styles, languages — is configurable in Set
 
 I wanted translation to feel like a system feature, not a destination. No tab to open, no paste dance, and — when I'm offline or handling something private — no data leaving my laptop. TypeTide is that: a quiet menu-bar helper that turns "go translate this" into a single keystroke.
 
-It's **open source (MIT)**. If it saves you a few context switches a day, a ⭐️ on [GitHub](https://github.com/everettjf/TypeTide) is appreciated, and the [Discord](https://discord.com/invite/eGzEaP6TzR) is open for questions and ideas.
+It's **open source (MIT)**. If it saves you a few context switches a day, a ⭐️ on [GitHub](https://github.com/everettjf/typetide) is appreciated, and the [Discord](https://discord.com/invite/eGzEaP6TzR) is open for questions and ideas.
 
 ---
 
-*TypeTide · system-wide AI translation & inline rewrite for macOS 26+. [Website](https://xnu.app/TypeTide/) · [GitHub](https://github.com/everettjf/TypeTide) · [中文版](introducing-typetide.zh.md)*
+*TypeTide · system-wide AI translation & inline rewrite for macOS 26+. [Website](https://xnu.app/TypeTide/) · [GitHub](https://github.com/everettjf/typetide) · [中文版](introducing-typetide.zh.md)*
