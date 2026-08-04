@@ -198,3 +198,7 @@ Issues and PRs welcome. Join the [Discord](https://discord.com/invite/eGzEaP6TzR
 ## 📄 License
 
 [MIT](LICENSE) · Made with ❤️ for macOS & Windows. If TypeTide helps you, a ⭐️ is appreciated!
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=everettjf/TypeTide&type=Date)](https://star-history.com/#everettjf/TypeTide&Date)

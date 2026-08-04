@@ -102,3 +102,10 @@ Keep `README.md` free of the app's release version — link to `../../releases`,
 refer to artifacts as `TypeTide-Setup-x.y.z.exe` / `build/TypeTide.dmg` style,
 never a pinned literal version. Platform/dependency versions (macOS 26+,
 Windows 10+, Swift 5.9+, C++20) are fine.
+
+## Current Product Priorities
+
+- Use **TypeTide** consistently in repository metadata, update feeds, documentation, UI, package names, and website copy; treat Saypick only as historical naming.
+- Track selection-capture success, replacement success, time to first translated token, total latency, cancellation, and provider failure locally during development without collecting user text.
+- Keep Ollama as a first-class offline path and make network-provider use obvious before selected text leaves the device.
+- Maintain parity tests for language direction, smart detection, prompt construction, streaming assembly, and clipboard restoration on macOS and Windows.
