@@ -371,6 +371,9 @@ void buildPages() {
         make(L"EDIT", L"", WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL, x + 120, y + 270, 280, 32, kOaiModel),
         makeLabel(L"API key is stored securely in Windows Credential Manager.",
                   x + 20, y + 310, w - 20, kOaiHint),
+        makeLabel(L"Privacy: triggered selections are sent to the configured cloud endpoint. "
+                  L"Use Ollama or exclude sensitive apps for private text.",
+                  x + 20, y + 338, w - 20, -1),
     };
     g.pages[1].insert(g.pages[1].end(), controls.begin(), controls.end());
     }
@@ -386,6 +389,7 @@ void buildPages() {
         SendMessageW(provider, CB_SETCURSEL, cloudProviderIndex(s.openAIBaseURL), 0);
     }
     updateBackendEnabled();
+    SetWindowPos(g.pages[1].back(), nullptr, px(x + 20), px(y + 338), px(w - 20), px(40), SWP_NOZORDER);
 
     // --- 2 Language ---
     y = 82;

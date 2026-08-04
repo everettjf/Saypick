@@ -126,6 +126,15 @@ Select / type  ─►  Shortcut · floating icon · auto
         Read: popup  ·  Write: paste in place (undo-safe)
 ```
 
+## 🔒 Privacy and system access
+
+TypeTide can read and replace selected text across applications, so macOS requires Accessibility permission; Windows uses UI Automation without a separate permission prompt. Capture happens only after a configured shortcut, floating-icon click, or auto-translate selection event. Apps containing sensitive text can be disabled in **Settings → Excluded apps**; use **shortcut only** mode when you do not want passive selection monitoring.
+
+- With **Ollama**, captured text is sent only to the Ollama service on `127.0.0.1`. TypeTide has no hosted relay or telemetry service.
+- With an **OpenAI-compatible backend**, captured text is sent to the configured base URL when translation is triggered. That provider's retention and privacy policy applies; do not use a cloud backend for secrets or sensitive text.
+- Some apps do not expose their selection through accessibility APIs. TypeTide then briefly copies the selection, reads it, and restores the previous clipboard contents. Clipboard managers may still record that temporary copy.
+- API keys are stored in Keychain on macOS and Windows Credential Manager on Windows.
+
 ## 🏗️ Project structure
 
 ```

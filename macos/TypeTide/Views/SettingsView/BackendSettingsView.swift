@@ -40,6 +40,11 @@ struct BackendSettingsView: View {
                     TextField("Model", text: $openAIModel)
                         .textFieldStyle(.roundedBorder)
                     SettingsNote(text: "Works with any OpenAI-compatible /chat/completions endpoint (official API, proxies, local servers).")
+                    SettingsNote(
+                        text: "When you trigger a translation or rewrite, the selected text is sent to this endpoint. Avoid cloud backends for passwords, private messages, or other sensitive text.",
+                        symbol: "exclamationmark.shield.fill",
+                        tint: .orange
+                    )
                 } header: {
                     SettingsSectionHeader(symbol: "cloud.fill", color: .indigo, title: "OpenAI-compatible")
                 }
@@ -84,6 +89,11 @@ struct BackendSettingsView: View {
                         .controlSize(.small)
                         .disabled(isLoadingModels)
                     }
+                    SettingsNote(
+                        text: "Ollama processes selected text on this Mac. TypeTide does not send it to a TypeTide service.",
+                        symbol: "hand.raised.fill",
+                        tint: .green
+                    )
                 } header: {
                     SettingsSectionHeader(symbol: "desktopcomputer", color: .green,
                                           title: "Ollama", subtitle: "Local and private")

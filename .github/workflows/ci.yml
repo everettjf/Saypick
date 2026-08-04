@@ -6,6 +6,19 @@ on:
   pull_request:
 
 jobs:
+  branding:
+    name: Brand consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject legacy brand references
+        shell: bash
+        run: |
+          if git grep -ni -E 'say[pP]ick|say[[:space:]]+pick'; then
+            echo "Legacy product name found; use TypeTide everywhere."
+            exit 1
+          fi
+
   windows:
     name: Windows build + self-test
     runs-on: windows-latest
