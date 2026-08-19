@@ -31,4 +31,13 @@ final class OptionalShortcutTests: XCTestCase {
         XCTAssertFalse(ShortcutConfiguration.isDuplicate(read, nil))
         XCTAssertFalse(ShortcutConfiguration.isDuplicate(nil, nil))
     }
+
+    func testShortcutEventDebouncerCoalescesOnlyRapidRepeatsOfSameShortcut() {
+        var debouncer = ShortcutEventDebouncer(minimumIntervalNanoseconds: 300)
+
+        XCTAssertTrue(debouncer.shouldHandle(id: 2, nowNanoseconds: 1_000))
+        XCTAssertFalse(debouncer.shouldHandle(id: 2, nowNanoseconds: 1_200))
+        XCTAssertTrue(debouncer.shouldHandle(id: 1, nowNanoseconds: 1_200))
+        XCTAssertTrue(debouncer.shouldHandle(id: 2, nowNanoseconds: 1_500))
+    }
 }

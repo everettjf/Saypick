@@ -83,6 +83,23 @@ enum ShortcutConfiguration {
     }
 }
 
+/// Carbon can deliver more than one pressed event for a held global shortcut.
+/// Coalesce only same-ID events that arrive inside a short repeat window.
+struct ShortcutEventDebouncer {
+    private var lastHandledNanoseconds: [UInt32: UInt64] = [:]
+    let minimumIntervalNanoseconds: UInt64
+
+    init(minimumIntervalNanoseconds: UInt64 = 300_000_000) {
+        self.minimumIntervalNanoseconds = minimumIntervalNanoseconds
+    }
+
+    mutating func shouldHandle(id: UInt32, nowNanoseconds: UInt64) -> Bool {
+        defer { lastHandledNanoseconds[id] = nowNanoseconds }
+        guard let previous = lastHandledNanoseconds[id], nowNanoseconds >= previous else { return true }
+        return nowNanoseconds - previous >= minimumIntervalNanoseconds
+    }
+}
+
 final class GlobalShortcutCenter {
     static let shared = GlobalShortcutCenter()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.xnu.typetide",
@@ -91,6 +108,7 @@ final class GlobalShortcutCenter {
     private var hotKeyRefs: [UInt32: EventHotKeyRef] = [:]
     private var handlers: [UInt32: () -> Void] = [:]
     private var eventHandler: EventHandlerRef?
+    private var eventDebouncer = ShortcutEventDebouncer()
 
     private init() {}
 
@@ -153,6 +171,11 @@ final class GlobalShortcutCenter {
             var hkID = EventHotKeyID()
             GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
                               nil, MemoryLayout<EventHotKeyID>.size, nil, &hkID)
+            let now = DispatchTime.now().uptimeNanoseconds
+            guard manager.eventDebouncer.shouldHandle(id: hkID.id, nowNanoseconds: now) else {
+                manager.logger.notice("Ignored repeated shortcut id=\(hkID.id)")
+                return noErr
+            }
             manager.logger.notice("Received shortcut id=\(hkID.id)")
             manager.handlers[hkID.id]?()
             return noErr
