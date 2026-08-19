@@ -30,8 +30,8 @@ No browser tab and no copy-paste loop. Translation runs through a local model (*
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/rewrite.gif" alt="Type Chinese, press ⌥R, and it is rewritten into English in place" width="760" />
-  <br/><sub><i>Write · type in your language, press <kbd>⌥R</kbd>, and it’s rewritten in place.</i></sub>
+  <img src="docs/screenshots/rewrite.gif" alt="Type Chinese, press the rewrite shortcut, and it is rewritten into English in place" width="760" />
+  <br/><sub><i>Write · type in your language, press <kbd>⌥R</kbd> on macOS or <kbd>Alt+R</kbd> on Windows, and it’s rewritten in place.</i></sub>
 </p>
 
 <p align="center">
@@ -73,7 +73,7 @@ No browser tab and no copy-paste loop. Translation runs through a local model (*
 
 ## 🌍 Languages
 
-Detection and translation cover the 10 most-spoken languages: **English, Chinese, Hindi, Spanish, French, Arabic, Bengali, Russian, Portuguese, Indonesian.** Pick your native and foreign language in **Settings → Language**. Each shortcut (⌥D / ⌥R) has its own direction: **auto** detects the selected text's language and translates the other way, or pin a **fixed** direction for mixed-language text.
+Detection and translation cover the 10 most-spoken languages: **English, Chinese, Hindi, Spanish, French, Arabic, Bengali, Russian, Portuguese, Indonesian.** Pick your native and foreign language in **Settings → Language**. Each Read/Write shortcut (`⌥D / ⌥R` on macOS, `Alt+D / Alt+R` on Windows) has its own direction: **auto** detects the selected text's language and translates the other way, or pin a **fixed** direction for mixed-language text.
 
 ## 🚀 Quick start
 
