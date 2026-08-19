@@ -97,7 +97,7 @@ TypeTide lists your installed models in **Settings → Backend** and auto-picks 
 
 macOS — with [Homebrew](https://brew.sh) (recommended):
 ```bash
-brew install --cask everettjf/typetide/typetide
+brew install --cask everettjf/tap/typetide
 ```
 …or download the latest `.dmg` from [Releases](https://github.com/everettjf/typetide/releases/latest), drag it to Applications, and launch it. The build is signed and notarized by Apple.
 
