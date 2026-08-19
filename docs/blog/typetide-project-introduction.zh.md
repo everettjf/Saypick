@@ -11,7 +11,7 @@ tags:
 
 # TypeTide：把 AI 翻译变成 macOS 与 Windows 的系统能力
 
-> 选中一段外文，一个快捷键就地读懂；用母语写完，一次按键直接改写成目标语言。TypeTide 不要求你离开正在使用的应用，也可以让模型完全运行在自己的电脑上。
+> **Type in your language. Rewrite in place.** 选中一段外文，一个快捷键就地读懂；用母语输入，一次按键直接改写成目标语言。TypeTide 不要求你离开正在使用的应用，也可以让模型完全运行在自己的电脑上。
 
 ![TypeTide 图标](assets/typetide-icon.png)
 
@@ -20,6 +20,8 @@ tags:
 ![传统翻译流程与 TypeTide 的对比](assets/01-flowchart-translation-tax.svg)
 
 TypeTide 想删掉的正是这个流程。它是一款开源、原生、双平台的系统级 AI 翻译工具：macOS 端常驻菜单栏，Windows 端常驻系统托盘，在邮件、聊天工具、浏览器、IDE、终端等应用中都能使用。
+
+“Read”是选中已有内容并在原处读懂；“Write”则是直接用自己的语言输入，再在原输入框中改写。主标语聚焦第二个动作，因为它最能体现 TypeTide 的名字和与普通翻译工具的差别；划词翻译仍然是完整的一等功能。
 
 ## 两件事：读懂与写出
 
@@ -68,7 +70,7 @@ TypeTide 支持两类后端：
 
 Ollama 是一等公民，而不是附带选项。TypeTide 会列出本机已安装模型、根据机器内存给出建议，并在原配置模型不存在时选择可用模型。对于 qwen3 等思考型模型，还会关闭不必要的隐藏推理，避免一次简单翻译等待很久。
 
-OpenAI 兼容模式使用标准 `/chat/completions` 与 SSE 流式响应，可连接兼容服务或自己的网关。API Key 在 macOS 存入钥匙串，在 Windows 存入 Credential Manager。
+OpenAI 兼容模式使用标准 `/chat/completions` 与 SSE 流式响应，可连接 OpenAI、OpenRouter、DeepSeek、兼容服务或自己的网关。API Key 在 macOS 存入钥匙串，在 Windows 存入 Credential Manager，而不是明文写进设置文件。
 
 ## 为什么它能跨应用工作
 
@@ -114,7 +116,18 @@ macOS 需要用户授予辅助功能权限；Windows 不需要额外的系统权
 
 ## 十种语言，四种表达风格
 
-TypeTide 支持英语、中文、印地语、西班牙语、法语、阿拉伯语、孟加拉语、俄语、葡萄牙语和印尼语。
+macOS 和 Windows 使用完全相同的十种检测与翻译语言：
+
+- English（英语，`en`）
+- 中文（`zh`）
+- हिन्दी（印地语，`hi`）
+- Español（西班牙语，`es`）
+- Français（法语，`fr`）
+- العربية（阿拉伯语，`ar`）
+- বাংলা（孟加拉语，`bn`）
+- Русский（俄语，`ru`）
+- Português（葡萄牙语，`pt`）
+- Bahasa Indonesia（印尼语，`id`）
 
 读和写可以分别选择四种风格：
 
@@ -127,12 +140,14 @@ TypeTide 支持英语、中文、印地语、西班牙语、法语、阿拉伯�
 
 ## 三步开始使用
 
-1. 安装后端。隐私与离线优先时安装 [Ollama](https://ollama.com/download)，例如运行 `ollama pull qwen2.5:3b`；也可以直接填写 OpenAI 兼容接口。
-2. 从 [GitHub Releases](https://github.com/everettjf/typetide/releases) 下载 macOS DMG 或 Windows 安装包。macOS 用户也可运行 `brew install --cask everettjf/typetide/typetide`。
-3. macOS 授予辅助功能权限，Windows 直接启动。选中文字按“读”快捷键，输入文字按“写”快捷键。
+1. **选择后端。** 隐私与离线优先时安装 [Ollama](https://ollama.com/download)，例如运行 `ollama pull qwen2.5:3b`；也可以填写自己的云端兼容接口。
+2. **安装应用。** 从 [GitHub Releases](https://github.com/everettjf/typetide/releases/latest) 下载 macOS DMG、Windows 安装版 EXE 或便携版 ZIP。macOS 用户也可运行 `brew install --cask everettjf/typetide/typetide`。
+3. **完成首次检查。** macOS 授予辅助功能权限，Windows 无需额外系统权限；然后在设置中测试后端并验证已配置的快捷键。选中文字按“读”，输入文字按“写”。
+
+目前系统要求为 macOS 26+ 或 Windows 10+。macOS 安装包经过 Developer ID 签名与 Apple 公证；Windows 提供无需管理员权限的按用户安装包和便携版。
 
 TypeTide 是一个 MIT 许可的开源项目。它不试图成为另一个需要长期停留的翻译工作台，而是希望翻译像复制、粘贴一样，成为操作系统中随手可用的能力。
 
 项目地址：[github.com/everettjf/typetide](https://github.com/everettjf/typetide)
 
-产品主页：[xnu.app/TypeTide](https://xnu.app/TypeTide/)
+产品主页：[xnu.app/typetide](https://xnu.app/typetide/)
