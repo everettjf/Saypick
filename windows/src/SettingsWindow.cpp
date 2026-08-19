@@ -1,14 +1,18 @@
 #include "SettingsWindow.h"
 #include "App.h"
 #include "LaunchAtLogin.h"
+#include "LocalDiagnostics.h"
 #include "OllamaModels.h"
 #include "resource.h"
 #include "Settings.h"
+#include "Translator.h"
 #include "UpdateChecker.h"
 #include "Util.h"
 #include <commctrl.h>
+#include <commdlg.h>
 #include <dwmapi.h>
 #include <shellapi.h>
+#include <uxtheme.h>
 #include <string>
 #include <thread>
 #include <vector>
@@ -19,31 +23,38 @@ constexpr wchar_t kClassName[] = L"TypeTideSettings";
 // 工作线程取回 Ollama 模型列表：lParam = std::vector<std::wstring>*（接收方释放）
 constexpr UINT kMsgOllamaModels = WM_APP + 100;
 constexpr UINT kMsgUpdateResult = WM_APP + 101;
+constexpr UINT kMsgBackendHealth = WM_APP + 102;
 
 enum CtrlId : int {
     kTab = 1000,
     // General
-    kEnable, kLogin, kVersionLabel, kCheckUpdate,
+    kEnable, kLogin, kVersionLabel, kCheckUpdate, kFirstRunHint,
     // Backend
     kBackendOllama, kBackendOpenAI,
     kOllamaModelLabel, kOllamaModel, kOllamaRefresh, kOllamaHint,
     kOaiProviderLabel, kOaiProvider,
     kOaiUrlLabel, kOaiUrl, kOaiKeyLabel, kOaiKey, kOaiModelLabel, kOaiModel, kOaiHint,
+    kBackendTest, kBackendStatus,
     // Language
     kNativeLabel, kNative, kForeignLabel, kForeign,
     kReadDirLabel, kReadDir, kRewriteDirLabel, kRewriteDir, kLangWarn,
     // Shortcuts
-    kHkReadLabel, kHkRead, kHkRewriteLabel, kHkRewrite, kHkNote,
+    kHkReadLabel, kHkRead, kReadWin, kHkReadClear,
+    kHkRewriteLabel, kHkRewrite, kRewriteWin, kHkRewriteClear,
+    kReadActionLabel, kReadAction, kRewriteActionLabel, kRewriteAction,
+    kHkRestoreDefaults, kHkVerify, kHkNote,
     // Behavior
     kTriggerLabel, kTrigger, kPreview,
     kReadStyleLabel, kReadStyle, kRewriteStyleLabel, kRewriteStyle,
     // Skip apps
     kSkipEdit, kSkipAdd, kSkipList, kSkipRemove, kSkipHint,
+    // Diagnostics
+    kDiagPrivacy, kDiagExport, kDiagClear, kDiagPath,
     // About
     kAboutTitle, kAboutDesc, kAboutLinks,
     // Page headings (must remain contiguous)
     kPageTitle0, kPageTitle1, kPageTitle2, kPageTitle3,
-    kPageTitle4, kPageTitle5, kPageTitle6,
+    kPageTitle4, kPageTitle5, kPageTitle6, kPageTitle7,
 };
 
 struct State {
@@ -55,17 +66,51 @@ struct State {
     std::vector<std::vector<HWND>> pages;  // 每个 tab 页的控件
     bool loading = false;                  // 初始化填充时不触发保存
     bool saveWarningShown = false;
+    bool backendReady = false;
+    bool shortcutsReady = false;
+    bool dark = false;
 };
 
 State g;
 
+HWND ctrl(int id);
+
 int px(int v) { return MulDiv(v, (int)g.dpi, 96); }
 
-constexpr COLORREF kPageBg = RGB(0xF3, 0xF3, 0xF3);
-constexpr COLORREF kNavBg = RGB(0xF0, 0xEF, 0xF5);
-constexpr COLORREF kText = RGB(0x20, 0x20, 0x24);
-constexpr COLORREF kSecondary = RGB(0x67, 0x67, 0x72);
 constexpr COLORREF kAccent = RGB(0x7C, 0x5C, 0xFF);
+
+COLORREF pageBg() { return g.dark ? RGB(0x20, 0x20, 0x22) : RGB(0xF3, 0xF3, 0xF3); }
+COLORREF navBg() { return g.dark ? RGB(0x19, 0x19, 0x1B) : RGB(0xF0, 0xEF, 0xF5); }
+COLORREF textColor() { return g.dark ? RGB(0xF2, 0xF2, 0xF4) : RGB(0x20, 0x20, 0x24); }
+COLORREF secondaryColor() { return g.dark ? RGB(0xB0, 0xB0, 0xB8) : RGB(0x67, 0x67, 0x72); }
+HBRUSH pageBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3)); static HBRUSH dark = CreateSolidBrush(RGB(0x20, 0x20, 0x22)); return g.dark ? dark : light; }
+HBRUSH navBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xF0, 0xEF, 0xF5)); static HBRUSH dark = CreateSolidBrush(RGB(0x19, 0x19, 0x1B)); return g.dark ? dark : light; }
+HBRUSH editBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF)); static HBRUSH dark = CreateSolidBrush(RGB(0x2B, 0x2B, 0x2E)); return g.dark ? dark : light; }
+
+bool systemUsesDarkMode() {
+    DWORD light = 1, size = sizeof(light);
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER,
+                      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                      0, KEY_QUERY_VALUE, &key) == ERROR_SUCCESS) {
+        RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, nullptr, (BYTE*)&light, &size);
+        RegCloseKey(key);
+    }
+    return light == 0;
+}
+
+void updateFirstRunCompletion() {
+    Settings& s = Settings::shared();
+    if (!s.hasCompletedFirstLaunch && g.backendReady && g.shortcutsReady) {
+        s.hasCompletedFirstLaunch = true;
+        s.save();
+    }
+    if (ctrl(kFirstRunHint)) {
+        SetWindowTextW(ctrl(kFirstRunHint), s.hasCompletedFirstLaunch
+            ? L"Setup checks complete. TypeTide is ready."
+            : L"First run: test the backend and verify both shortcuts before relying on TypeTide.");
+    }
+}
 
 HWND ctrl(int id) { return GetDlgItem(g.hwnd, id); }
 
@@ -231,6 +276,17 @@ RewriteStyle comboStyle(HWND combo) {
     return (idx >= 0 && idx < 4) ? all[idx] : RewriteStyle::Faithful;
 }
 
+void fillShortcutActionCombo(HWND combo, ShortcutAction selected) {
+    const wchar_t* names[] = {
+        L"Smart translate · popup", L"Translate to native language · popup",
+        L"Translate to foreign language · popup", L"Smart translate · replace",
+        L"Translate to native language · replace", L"Translate to foreign language · replace",
+    };
+    SendMessageW(combo, CB_RESETCONTENT, 0, 0);
+    for (const auto* name : names) SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)name);
+    SendMessageW(combo, CB_SETCURSEL, (int)selected, 0);
+}
+
 std::wstring editText(HWND edit) {
     int n = GetWindowTextLengthW(edit);
     std::wstring s(n, 0);
@@ -256,6 +312,14 @@ Hotkey hotkeyFromControl(WORD w) {
     if (flags & HOTKEYF_CONTROL) hk.modifiers |= MOD_CONTROL;
     if (flags & HOTKEYF_ALT) hk.modifiers |= MOD_ALT;
     return hk;
+}
+
+void updateShortcutControls() {
+    const Settings& s = Settings::shared();
+    EnableWindow(ctrl(kReadWin), s.readShortcut.isConfigured());
+    EnableWindow(ctrl(kRewriteWin), s.rewriteShortcut.isConfigured());
+    EnableWindow(ctrl(kHkReadClear), s.readShortcut.isConfigured());
+    EnableWindow(ctrl(kHkRewriteClear), s.rewriteShortcut.isConfigured());
 }
 
 // ---------- 页构建 ----------
@@ -315,14 +379,14 @@ void updateLangWarn() {
 
 void buildPages() {
     const Settings& s = Settings::shared();
-    g.pages.assign(7, {});
+    g.pages.assign(8, {});
     const int x = 222, w = 560;
     int y;
     const wchar_t* pageTitles[] = {
         L"General", L"Translation backend", L"Languages", L"Keyboard shortcuts",
-        L"Behavior", L"Excluded apps", L"About TypeTide"
+        L"Behavior", L"Excluded apps", L"Diagnostics", L"About TypeTide"
     };
-    for (int page = 0; page < 7; ++page) {
+    for (int page = 0; page < 8; ++page) {
         HWND title = makeLabel(pageTitles[page], x, 26, w, kPageTitle0 + page);
         SendMessageW(title, WM_SETFONT, (WPARAM)g.fontTitle, TRUE);
         SetWindowPos(title, nullptr, px(x), px(26), px(w), px(36), SWP_NOZORDER);
@@ -340,11 +404,13 @@ void buildPages() {
         makeLabel(L"UPDATES", x, y + 150, w, -1, true),
         makeLabel(L"Version " TYPETIDE_VERSION_STRING, x, y + 178, 200, kVersionLabel),
         make(L"BUTTON", L"Check for updates", WS_TABSTOP | BS_PUSHBUTTON, x, y + 206, 150, 32, kCheckUpdate),
+        makeLabel(L"", x, y + 258, w, kFirstRunHint),
     };
     g.pages[0].insert(g.pages[0].end(), controls.begin(), controls.end());
     }
     CheckDlgButton(g.hwnd, kEnable, s.enabled ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(g.hwnd, kLogin, launchatlogin::IsEnabled() ? BST_CHECKED : BST_UNCHECKED);
+    updateFirstRunCompletion();
 
     // --- 1 Backend ---
     y = 82;
@@ -374,6 +440,10 @@ void buildPages() {
         makeLabel(L"Privacy: triggered selections are sent to the configured cloud endpoint. "
                   L"Use Ollama or exclude sensitive apps for private text.",
                   x + 20, y + 338, w - 20, -1),
+        make(L"BUTTON", L"Test connection", WS_TABSTOP | BS_PUSHBUTTON,
+             x + 20, y + 386, 130, 30, kBackendTest),
+        makeLabel(L"Uses fixed synthetic text, never your clipboard.",
+                  x + 165, y + 392, w - 165, kBackendStatus),
     };
     g.pages[1].insert(g.pages[1].end(), controls.begin(), controls.end());
     }
@@ -420,16 +490,31 @@ void buildPages() {
     {
     std::vector<HWND> controls = {
         makeLabel(L"Translate selection (read):", x, y + 4, 180, kHkReadLabel),
-        make(HOTKEY_CLASSW, L"", WS_TABSTOP, x + 195, y, 180, 24, kHkRead),
+        make(HOTKEY_CLASSW, L"", WS_TABSTOP, x + 195, y, 155, 24, kHkRead),
+        make(L"BUTTON", L"Win key", WS_TABSTOP | BS_AUTOCHECKBOX, x + 365, y + 1, 80, 22, kReadWin),
+        make(L"BUTTON", L"Clear", WS_TABSTOP | BS_PUSHBUTTON, x + 455, y, 64, 24, kHkReadClear),
         makeLabel(L"Rewrite && replace (write):", x, y + 38, 180, kHkRewriteLabel),
-        make(HOTKEY_CLASSW, L"", WS_TABSTOP, x + 195, y + 34, 180, 24, kHkRewrite),
-        makeLabel(L"Click a field and press the new key combo. Applied immediately.",
-                  x, y + 76, w, kHkNote),
+        make(HOTKEY_CLASSW, L"", WS_TABSTOP, x + 195, y + 34, 155, 24, kHkRewrite),
+        make(L"BUTTON", L"Win key", WS_TABSTOP | BS_AUTOCHECKBOX, x + 365, y + 35, 80, 22, kRewriteWin),
+        make(L"BUTTON", L"Clear", WS_TABSTOP | BS_PUSHBUTTON, x + 455, y + 34, 64, 24, kHkRewriteClear),
+        makeLabel(L"Translate action:", x, y + 76, 180, kReadActionLabel),
+        make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST, x + 195, y + 72, 300, 220, kReadAction),
+        makeLabel(L"Rewrite action:", x, y + 110, 180, kRewriteActionLabel),
+        make(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST, x + 195, y + 106, 300, 220, kRewriteAction),
+        make(L"BUTTON", L"Restore defaults", WS_TABSTOP | BS_PUSHBUTTON, x, y + 150, 120, 28, kHkRestoreDefaults),
+        make(L"BUTTON", L"Verify shortcuts", WS_TABSTOP | BS_PUSHBUTTON, x + 130, y + 150, 120, 28, kHkVerify),
+        makeLabel(L"Changes apply immediately. Keep at least one shortcut; configured shortcuts must be different.",
+                  x, y + 190, w, kHkNote),
     };
     g.pages[3].insert(g.pages[3].end(), controls.begin(), controls.end());
     }
     SendMessageW(ctrl(kHkRead), HKM_SETHOTKEY, hotkeyToControl(s.readShortcut), 0);
     SendMessageW(ctrl(kHkRewrite), HKM_SETHOTKEY, hotkeyToControl(s.rewriteShortcut), 0);
+    CheckDlgButton(g.hwnd, kReadWin, s.readShortcut.modifiers & MOD_WIN ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(g.hwnd, kRewriteWin, s.rewriteShortcut.modifiers & MOD_WIN ? BST_CHECKED : BST_UNCHECKED);
+    updateShortcutControls();
+    fillShortcutActionCombo(ctrl(kReadAction), s.readShortcutAction);
+    fillShortcutActionCombo(ctrl(kRewriteAction), s.rewriteShortcutAction);
 
     // --- 4 Behavior ---
     y = 82;
@@ -472,7 +557,22 @@ void buildPages() {
     for (auto& app : s.skipApps)
         SendMessageW(ctrl(kSkipList), LB_ADDSTRING, 0, (LPARAM)app.c_str());
 
-    // --- 6 About ---
+    // --- 6 Diagnostics ---
+    y = 82;
+    {
+    std::vector<HWND> controls = {
+        makeLabel(L"Stored only on this PC. Never includes selected text, translations, clipboard contents, app names, URLs, or credentials.",
+                  x, y, w, kDiagPrivacy),
+        makeLabel(L"Report file:", x, y + 52, 90, -1),
+        makeLabel(diagnostics::Path().c_str(), x + 90, y + 52, w - 90, kDiagPath),
+        make(L"BUTTON", L"Export report…", WS_TABSTOP | BS_PUSHBUTTON, x, y + 92, 130, 30, kDiagExport),
+        make(L"BUTTON", L"Clear diagnostics", WS_TABSTOP | BS_PUSHBUTTON, x + 142, y + 92, 130, 30, kDiagClear),
+    };
+    g.pages[6].insert(g.pages[6].end(), controls.begin(), controls.end());
+    }
+    SetWindowPos(ctrl(kDiagPrivacy), nullptr, px(x), px(y), px(w), px(40), SWP_NOZORDER);
+
+    // --- 7 About ---
     y = 82;
     {
     std::vector<HWND> controls = {
@@ -486,7 +586,7 @@ void buildPages() {
              L"<a href=\"https://discord.com/invite/eGzEaP6TzR\">Discord</a>",
              WS_TABSTOP, x, y + 84, w, 22, kAboutLinks),
     };
-    g.pages[6].insert(g.pages[6].end(), controls.begin(), controls.end());
+    g.pages[7].insert(g.pages[7].end(), controls.begin(), controls.end());
     }
     // 描述区两行高
     SetWindowPos(ctrl(kAboutDesc), nullptr, px(x), px(y + 28), px(w), px(40), SWP_NOZORDER);
@@ -564,6 +664,19 @@ void onCommand(int id, int code) {
         if (code != EN_CHANGE) return;
         s.openAIModel = util::Narrow(editText(ctrl(kOaiModel)));
         break;
+    case kBackendTest:
+        EnableWindow(ctrl(kBackendTest), FALSE);
+        SetWindowTextW(ctrl(kBackendTest), L"Testing…");
+        SetWindowTextW(ctrl(kBackendStatus), L"Connecting and translating synthetic text…");
+        {
+        HWND target = g.hwnd;
+        translator::CheckHealthAsync([target](translator::HealthCheckResult result) {
+            auto* payload = new translator::HealthCheckResult(std::move(result));
+            if (!PostMessageW(target, kMsgBackendHealth, 0, (LPARAM)payload)) delete payload;
+        });
+        }
+        save = false;
+        break;
 
     case kNative:
         if (code != CBN_SELCHANGE) return;
@@ -592,8 +705,22 @@ void onCommand(int id, int code) {
         if (code != EN_CHANGE) return;
         {
             Hotkey hk = hotkeyFromControl((WORD)SendMessageW(ctrl(kHkRead), HKM_GETHOTKEY, 0, 0));
-            if (hk.vk == 0) return;  // 未设置完
+            if (hk.vk == 0) {
+                s.readShortcut = {0, 0};
+                CheckDlgButton(g.hwnd, kReadWin, BST_UNCHECKED);
+                updateShortcutControls();
+                reapply = true;
+                break;
+            }
+            if (IsDlgButtonChecked(g.hwnd, kReadWin) == BST_CHECKED) hk.modifiers |= MOD_WIN;
+            if (s.rewriteShortcut.isConfigured() && hk == s.rewriteShortcut) {
+                MessageBoxW(g.hwnd, L"Translate and rewrite must use different shortcuts.",
+                            L"TypeTide — duplicate shortcut", MB_OK | MB_ICONWARNING);
+                SendMessageW(ctrl(kHkRead), HKM_SETHOTKEY, hotkeyToControl(s.readShortcut), 0);
+                return;
+            }
             s.readShortcut = hk;
+            updateShortcutControls();
             reapply = true;
         }
         break;
@@ -601,10 +728,107 @@ void onCommand(int id, int code) {
         if (code != EN_CHANGE) return;
         {
             Hotkey hk = hotkeyFromControl((WORD)SendMessageW(ctrl(kHkRewrite), HKM_GETHOTKEY, 0, 0));
-            if (hk.vk == 0) return;
+            if (hk.vk == 0) {
+                s.rewriteShortcut = {0, 0};
+                CheckDlgButton(g.hwnd, kRewriteWin, BST_UNCHECKED);
+                updateShortcutControls();
+                reapply = true;
+                break;
+            }
+            if (IsDlgButtonChecked(g.hwnd, kRewriteWin) == BST_CHECKED) hk.modifiers |= MOD_WIN;
+            if (s.readShortcut.isConfigured() && hk == s.readShortcut) {
+                MessageBoxW(g.hwnd, L"Translate and rewrite must use different shortcuts.",
+                            L"TypeTide — duplicate shortcut", MB_OK | MB_ICONWARNING);
+                SendMessageW(ctrl(kHkRewrite), HKM_SETHOTKEY, hotkeyToControl(s.rewriteShortcut), 0);
+                return;
+            }
             s.rewriteShortcut = hk;
+            updateShortcutControls();
             reapply = true;
         }
+        break;
+    case kReadWin:
+        if (!s.readShortcut.isConfigured()) {
+            CheckDlgButton(g.hwnd, kReadWin, BST_UNCHECKED);
+            return;
+        }
+        if (IsDlgButtonChecked(g.hwnd, kReadWin) == BST_CHECKED) s.readShortcut.modifiers |= MOD_WIN;
+        else s.readShortcut.modifiers &= ~MOD_WIN;
+        if (s.rewriteShortcut.isConfigured() && s.readShortcut == s.rewriteShortcut) {
+            MessageBoxW(g.hwnd, L"Translate and rewrite must use different shortcuts.",
+                        L"TypeTide — duplicate shortcut", MB_OK | MB_ICONWARNING);
+            s.readShortcut.modifiers ^= MOD_WIN;
+            CheckDlgButton(g.hwnd, kReadWin,
+                           s.readShortcut.modifiers & MOD_WIN ? BST_CHECKED : BST_UNCHECKED);
+            return;
+        }
+        reapply = true;
+        break;
+    case kRewriteWin:
+        if (!s.rewriteShortcut.isConfigured()) {
+            CheckDlgButton(g.hwnd, kRewriteWin, BST_UNCHECKED);
+            return;
+        }
+        if (IsDlgButtonChecked(g.hwnd, kRewriteWin) == BST_CHECKED) s.rewriteShortcut.modifiers |= MOD_WIN;
+        else s.rewriteShortcut.modifiers &= ~MOD_WIN;
+        if (s.readShortcut.isConfigured() && s.readShortcut == s.rewriteShortcut) {
+            MessageBoxW(g.hwnd, L"Translate and rewrite must use different shortcuts.",
+                        L"TypeTide — duplicate shortcut", MB_OK | MB_ICONWARNING);
+            s.rewriteShortcut.modifiers ^= MOD_WIN;
+            CheckDlgButton(g.hwnd, kRewriteWin,
+                           s.rewriteShortcut.modifiers & MOD_WIN ? BST_CHECKED : BST_UNCHECKED);
+            return;
+        }
+        reapply = true;
+        break;
+    case kHkReadClear:
+        s.readShortcut = {0, 0};
+        SendMessageW(ctrl(kHkRead), HKM_SETHOTKEY, 0, 0);
+        CheckDlgButton(g.hwnd, kReadWin, BST_UNCHECKED);
+        updateShortcutControls();
+        reapply = true;
+        break;
+    case kHkRewriteClear:
+        s.rewriteShortcut = {0, 0};
+        SendMessageW(ctrl(kHkRewrite), HKM_SETHOTKEY, 0, 0);
+        CheckDlgButton(g.hwnd, kRewriteWin, BST_UNCHECKED);
+        updateShortcutControls();
+        reapply = true;
+        break;
+    case kReadAction:
+        if (code != CBN_SELCHANGE) return;
+        s.readShortcutAction = (ShortcutAction)SendMessageW(ctrl(kReadAction), CB_GETCURSEL, 0, 0);
+        break;
+    case kRewriteAction:
+        if (code != CBN_SELCHANGE) return;
+        s.rewriteShortcutAction = (ShortcutAction)SendMessageW(ctrl(kRewriteAction), CB_GETCURSEL, 0, 0);
+        break;
+    case kHkRestoreDefaults:
+        s.readShortcut = {MOD_ALT, 'D'};
+        s.rewriteShortcut = {MOD_ALT, 'R'};
+        s.readShortcutAction = ShortcutAction::SmartPopup;
+        s.rewriteShortcutAction = ShortcutAction::SmartReplace;
+        SendMessageW(ctrl(kHkRead), HKM_SETHOTKEY, hotkeyToControl(s.readShortcut), 0);
+        SendMessageW(ctrl(kHkRewrite), HKM_SETHOTKEY, hotkeyToControl(s.rewriteShortcut), 0);
+        CheckDlgButton(g.hwnd, kReadWin, BST_UNCHECKED);
+        CheckDlgButton(g.hwnd, kRewriteWin, BST_UNCHECKED);
+        fillShortcutActionCombo(ctrl(kReadAction), s.readShortcutAction);
+        fillShortcutActionCombo(ctrl(kRewriteAction), s.rewriteShortcutAction);
+        updateShortcutControls();
+        reapply = true;
+        break;
+    case kHkVerify:
+        applyToApp();
+        g.shortcutsReady = App::shared().shortcutsRegistered();
+        updateFirstRunCompletion();
+        MessageBoxW(g.hwnd,
+                    g.shortcutsReady ? L"Every configured shortcut is registered and ready."
+                                     : (!s.readShortcut.isConfigured() && !s.rewriteShortcut.isConfigured()
+                                        ? L"Set at least one shortcut so TypeTide can be triggered from the keyboard."
+                                        : L"One or more shortcuts are unavailable. Choose a different combination."),
+                    L"TypeTide — shortcut verification",
+                    MB_OK | (g.shortcutsReady ? MB_ICONINFORMATION : MB_ICONWARNING));
+        save = false;
         break;
 
     case kTrigger:
@@ -642,6 +866,29 @@ void onCommand(int id, int code) {
         SendMessageW(ctrl(kSkipList), LB_DELETESTRING, sel, 0);
         break;
     }
+    case kDiagExport: {
+        wchar_t path[MAX_PATH] = L"TypeTide-Diagnostics.json";
+        OPENFILENAMEW dialog{sizeof(dialog)};
+        dialog.hwndOwner = g.hwnd;
+        dialog.lpstrFilter = L"JSON report\0*.json\0All files\0*.*\0";
+        dialog.lpstrFile = path;
+        dialog.nMaxFile = MAX_PATH;
+        dialog.lpstrDefExt = L"json";
+        dialog.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+        if (GetSaveFileNameW(&dialog)) {
+            if (!CopyFileW(diagnostics::Path().c_str(), path, FALSE))
+                MessageBoxW(g.hwnd, L"No diagnostics have been recorded yet.",
+                            L"TypeTide — export", MB_OK | MB_ICONINFORMATION);
+        }
+        save = false;
+        break;
+    }
+    case kDiagClear:
+        diagnostics::Clear();
+        MessageBoxW(g.hwnd, L"Local diagnostics were cleared.", L"TypeTide — diagnostics",
+                    MB_OK | MB_ICONINFORMATION);
+        save = false;
+        break;
 
     default:
         return;
@@ -677,6 +924,17 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)m.c_str());
             SetWindowTextW(combo, current.c_str());
         }
+        ULONGLONG memoryKb = 0;
+        double cap = 0;
+        const uint64_t memoryBytes = GetPhysicallyInstalledSystemMemory(&memoryKb)
+            ? (uint64_t)memoryKb * 1024 : 16ULL * 1024 * 1024 * 1024;
+        const std::wstring recommended = ollamamodels::RecommendedForMemory(*models, memoryBytes, &cap);
+        if (!recommended.empty()) {
+            std::wstring hint = L"Recommended for this PC: " + recommended +
+                L" (comfortable target up to about " + std::to_wstring((int)cap) +
+                L"B). Ollama runs locally.";
+            SetWindowTextW(ctrl(kOllamaHint), hint.c_str());
+        }
         ollamamodels::PreloadAsync();
         delete models;
         return 0;
@@ -697,6 +955,23 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                         L"TypeTide update", MB_OK | MB_ICONWARNING);
         }
         return 0;
+    case kMsgBackendHealth: {
+        auto* result = (translator::HealthCheckResult*)lp;
+        EnableWindow(ctrl(kBackendTest), TRUE);
+        SetWindowTextW(ctrl(kBackendTest), L"Test connection");
+        std::wstring status = result->message;
+        if (result->ok) {
+            status += L"  ";
+            if (result->firstTokenMs >= 0)
+                status += L"First token " + std::to_wstring(result->firstTokenMs) + L" ms · ";
+            status += L"Total " + std::to_wstring(result->totalMs) + L" ms";
+        }
+        SetWindowTextW(ctrl(kBackendStatus), status.c_str());
+        g.backendReady = result->ok;
+        updateFirstRunCompletion();
+        delete result;
+        return 0;
+    }
     case WM_NOTIFY: {
         auto* hdr = (NMHDR*)lp;
         if (hdr->idFrom == kAboutLinks && (hdr->code == NM_CLICK || hdr->code == NM_RETURN)) {
@@ -710,7 +985,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         auto* item = reinterpret_cast<DRAWITEMSTRUCT*>(lp);
         if (item->CtlID != kTab || item->itemID == (UINT)-1) break;
         const bool selected = (item->itemState & ODS_SELECTED) != 0;
-        HBRUSH bg = CreateSolidBrush(selected ? RGB(0xE4, 0xDF, 0xFF) : kNavBg);
+        HBRUSH bg = CreateSolidBrush(selected ? (g.dark ? RGB(0x3A, 0x31, 0x59) : RGB(0xE4, 0xDF, 0xFF)) : navBg());
         FillRect(item->hDC, &item->rcItem, bg);
         DeleteObject(bg);
         if (selected) {
@@ -723,7 +998,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         wchar_t text[64]{};
         SendMessageW(item->hwndItem, LB_GETTEXT, item->itemID, (LPARAM)text);
         SetBkMode(item->hDC, TRANSPARENT);
-        SetTextColor(item->hDC, kText);
+        SetTextColor(item->hDC, textColor());
         SelectObject(item->hDC, g.font);
         RECT tr = item->rcItem;
         tr.left += px(18);
@@ -734,44 +1009,46 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         wchar_t cls[32]{};
         GetClassNameW((HWND)lp, cls, (int)std::size(cls));
         if (_wcsicmp(cls, L"Edit") == 0) {
-            static HBRUSH disabledEdit = CreateSolidBrush(RGB(0xEE, 0xEE, 0xF1));
-            SetBkColor((HDC)wp, RGB(0xEE, 0xEE, 0xF1));
-            SetTextColor((HDC)wp, kSecondary);
-            return (LRESULT)disabledEdit;
+            SetBkColor((HDC)wp, g.dark ? RGB(0x25, 0x25, 0x28) : RGB(0xEE, 0xEE, 0xF1));
+            SetTextColor((HDC)wp, secondaryColor());
+            return (LRESULT)pageBrush();
         }
         SetBkMode((HDC)wp, TRANSPARENT);
-        SetTextColor((HDC)wp, kText);
+        SetTextColor((HDC)wp, textColor());
         return (LRESULT)GetStockObject(NULL_BRUSH);
     }
     case WM_CTLCOLOREDIT: {
-        static HBRUSH editBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
-        SetBkColor((HDC)wp, RGB(0xFF, 0xFF, 0xFF));
-        SetTextColor((HDC)wp, kText);
-        return (LRESULT)editBrush;
+        SetBkColor((HDC)wp, g.dark ? RGB(0x2B, 0x2B, 0x2E) : RGB(0xFF, 0xFF, 0xFF));
+        SetTextColor((HDC)wp, textColor());
+        return (LRESULT)editBrush();
     }
     case WM_CTLCOLORBTN:
         SetBkMode((HDC)wp, TRANSPARENT);
-        SetTextColor((HDC)wp, kText);
+        SetTextColor((HDC)wp, textColor());
         return (LRESULT)GetStockObject(NULL_BRUSH);
     case WM_CTLCOLORLISTBOX:
-        SetBkColor((HDC)wp, kNavBg);
-        SetTextColor((HDC)wp, kText);
-        {
-            static HBRUSH navBrush = CreateSolidBrush(kNavBg);
-            return (LRESULT)navBrush;
-        }
+        SetBkColor((HDC)wp, navBg());
+        SetTextColor((HDC)wp, textColor());
+        return (LRESULT)navBrush();
     case WM_ERASEBKGND: {
         RECT rc{};
         GetClientRect(hwnd, &rc);
-        HBRUSH page = CreateSolidBrush(kPageBg);
-        FillRect((HDC)wp, &rc, page);
-        DeleteObject(page);
+        FillRect((HDC)wp, &rc, pageBrush());
         RECT nav{0, 0, px(184), rc.bottom};
-        HBRUSH navBrush = CreateSolidBrush(kNavBg);
-        FillRect((HDC)wp, &nav, navBrush);
-        DeleteObject(navBrush);
+        FillRect((HDC)wp, &nav, navBrush());
         return 1;
     }
+    case WM_SETTINGCHANGE:
+        g.dark = systemUsesDarkMode();
+        {
+            BOOL dark = g.dark;
+            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
+            for (auto& page : g.pages)
+                for (HWND control : page)
+                    SetWindowTheme(control, g.dark ? L"DarkMode_Explorer" : L"Explorer", nullptr);
+        }
+        InvalidateRect(hwnd, nullptr, TRUE);
+        return 0;
     case WM_CLOSE:
         DestroyWindow(hwnd);
         return 0;
@@ -826,7 +1103,8 @@ void open(HWND appWindow) {
                              wr.right - wr.left, wr.bottom - wr.top,
                              nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
     if (!g.hwnd) return;
-    BOOL dark = FALSE;
+    g.dark = systemUsesDarkMode();
+    BOOL dark = g.dark;
     DwmSetWindowAttribute(g.hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 
     HICON smallIcon = (HICON)LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APPICON),
@@ -859,13 +1137,16 @@ void open(HWND appWindow) {
     SendMessageW(tab, WM_SETFONT, (WPARAM)g.font, TRUE);
     SendMessageW(tab, LB_SETITEMHEIGHT, 0, px(42));
     const wchar_t* names[] = {L"General", L"Translation", L"Languages", L"Shortcuts",
-                              L"Behavior", L"Excluded apps", L"About"};
-    for (int i = 0; i < 7; ++i) {
+                              L"Behavior", L"Excluded apps", L"Diagnostics", L"About"};
+    for (int i = 0; i < 8; ++i) {
         SendMessageW(tab, LB_ADDSTRING, 0, (LPARAM)names[i]);
     }
     SendMessageW(tab, LB_SETCURSEL, 0, 0);
 
     buildPages();
+    for (auto& page : g.pages)
+        for (HWND control : page)
+            SetWindowTheme(control, g.dark ? L"DarkMode_Explorer" : L"Explorer", nullptr);
     showPage(0);
     g.loading = false;
 

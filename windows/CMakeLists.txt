@@ -8,6 +8,7 @@ add_executable(TypeTide WIN32
     src/main.cpp
     src/App.cpp
     src/Log.cpp
+    src/LocalDiagnostics.cpp
     src/Json.cpp
     src/Language.cpp
     src/Settings.cpp
@@ -36,6 +37,7 @@ add_executable(TypeTide WIN32
 target_compile_definitions(TypeTide PRIVATE
     UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN
     TYPETIDE_VERSION_STRING="${PROJECT_VERSION}"
+    TYPETIDE_CONTRACTS_PATH="${CMAKE_SOURCE_DIR}/../contracts/translation-contracts.json"
 )
 
 if(MSVC)
@@ -45,4 +47,5 @@ endif()
 target_link_libraries(TypeTide PRIVATE
     user32 gdi32 shell32 ole32 oleaut32 uuid comctl32
     winhttp uiautomationcore dwmapi advapi32 shlwapi uxtheme dbghelp
+    comdlg32
 )

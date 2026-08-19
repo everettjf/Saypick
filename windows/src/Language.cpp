@@ -1,6 +1,6 @@
 #include "Language.h"
-#include "Util.h"
 #include <algorithm>
+#include <cwctype>
 #include <map>
 #include <sstream>
 
@@ -68,6 +68,20 @@ const char* PromptName(Language l) {
 
 namespace {
 
+std::wstring trim(const std::wstring& value) {
+    const auto isSpace = [](wchar_t c) { return std::iswspace(c) != 0; };
+    const auto first = std::find_if_not(value.begin(), value.end(), isSpace);
+    if (first == value.end()) return {};
+    const auto last = std::find_if_not(value.rbegin(), value.rend(), isSpace).base();
+    return {first, last};
+}
+
+std::wstring toLower(std::wstring value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](wchar_t c) { return static_cast<wchar_t>(std::towlower(c)); });
+    return value;
+}
+
 // 拉丁语系（en/es/fr/pt/id）的高频停用词，用于打分区分
 const std::map<Language, std::vector<std::wstring>>& latinStopwords() {
     static const std::map<Language, std::vector<std::wstring>> map = {
@@ -88,7 +102,7 @@ const std::map<Language, std::vector<std::wstring>>& latinStopwords() {
 } // namespace
 
 std::optional<Language> Detect(const std::wstring& text) {
-    std::wstring t = util::Trim(text);
+    std::wstring t = trim(text);
     if (t.empty()) return std::nullopt;
 
     // 1) 按 Unicode 脚本区段计数
@@ -124,7 +138,7 @@ std::optional<Language> Detect(const std::wstring& text) {
     if (latin * 2 <= letters) return std::nullopt;
 
     // 2) 拉丁语系：分词后按停用词打分
-    std::wstring lower = util::ToLower(t);
+    std::wstring lower = toLower(t);
     std::vector<std::wstring> words;
     std::wstring cur;
     for (wchar_t c : lower) {
@@ -163,6 +177,25 @@ std::optional<TranslationDirection> DirectionFromCode(const std::string& s) {
     if (s == "nativeToForeign") return TranslationDirection::NativeToForeign;
     if (s == "foreignToNative") return TranslationDirection::ForeignToNative;
     return std::nullopt;
+}
+
+ResolvedDirection ResolveDirection(const std::wstring& text, TranslationDirection mode,
+                                   bool isWrite, Language native, Language foreign) {
+    switch (mode) {
+    case TranslationDirection::NativeToForeign:
+        return {native, foreign};
+    case TranslationDirection::ForeignToNative:
+        return {foreign, native};
+    case TranslationDirection::Auto:
+    default: {
+        std::optional<Language> detected = Detect(text);
+        Language target;
+        if (detected == native) target = foreign;
+        else if (detected == foreign) target = native;
+        else target = isWrite ? foreign : native;
+        return {detected, target};
+    }
+    }
 }
 
 const char* StyleCode(RewriteStyle s) {

@@ -19,6 +19,24 @@ enum TranslationError: LocalizedError {
         case .empty: return "Empty translation"
         }
     }
+
+    var category: String {
+        switch self {
+        case .notConfigured: return "configuration"
+        case .empty: return "emptyResponse"
+        case .network(let message):
+            let lower = message.lowercased()
+            if lower.contains("timed out") || lower.contains("timeout") { return "timeout" }
+            if lower.contains("http 401") || lower.contains("http 403") || lower.contains("unauthorized") {
+                return "authentication"
+            }
+            if lower.contains("could not connect") || lower.contains("cannot connect") ||
+                lower.contains("network connection") || lower.contains("not connected") {
+                return "connectivity"
+            }
+            return "provider"
+        }
+    }
 }
 
 /// 一次翻译请求
@@ -40,20 +58,20 @@ protocol TranslationProvider {
 /// 统一的提示词构造。支持风格（faithful 为纯翻译）。
 enum TranslationPrompt {
     static func system(target: Language, source: Language?, style: RewriteStyle = .faithful) -> String {
-        let from = source?.displayName ?? "the detected language"
+        let from = source?.promptName ?? "the detected language"
         let styleLine = style.instruction.map { " " + $0 } ?? ""
         return """
-        You are a professional translation engine. Translate the user's text from \(from) into \(target.displayName).\(styleLine) \
+        You are a professional translation engine. Translate the user's text from \(from) into \(target.promptName).\(styleLine) \
         Output ONLY the translation, with no quotes, no explanations, no extra notes. Preserve the original meaning and formatting.
         """
     }
 
     /// 用于不支持 system role 的纯 generate 接口
     static func plain(_ text: String, target: Language, source: Language?, style: RewriteStyle = .faithful) -> String {
-        let from = source?.displayName ?? "the source language"
+        let from = source?.promptName ?? "the source language"
         let styleLine = style.instruction.map { " " + $0 } ?? ""
         return """
-        Translate the following text from \(from) to \(target.displayName).\(styleLine) Only output the translation, no explanation.
+        Translate the following text from \(from) to \(target.promptName).\(styleLine) Only output the translation, no explanation.
 
         \(text)
         """

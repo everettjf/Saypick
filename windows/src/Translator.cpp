@@ -1,10 +1,12 @@
 #include "Translator.h"
 #include "Http.h"
 #include "Json.h"
+#include "LocalDiagnostics.h"
 #include "Settings.h"
 #include "Util.h"
 #include <atomic>
 #include <condition_variable>
+#include <chrono>
 #include <list>
 #include <map>
 #include <memory>
@@ -292,17 +294,9 @@ StreamOutcome runOpenAI(const TranslationRequest& req, const BackendConfig& s, u
 
     LineAssembler lines;
     auto onLine = [&](const std::string& line) {
-            if (line.rfind("data:", 0) != 0) return;
-            std::string payload = util::Trim(line.substr(5));
-            if (payload == "[DONE]") return;
-            bool ok = false;
-            json::Value v = json::Parse(payload, &ok);
-            if (!ok) return;
-            const json::Value& delta = v["choices"].at(0)["delta"]["content"];
-            if (delta.isString() && !delta.asString().empty()) {
-                std::wstring wdelta = util::Widen(delta.asString());
-                out.full += wdelta;
-                onDelta(id, wdelta);
+            if (auto delta = ParseOpenAISSELine(line)) {
+                out.full += *delta;
+                onDelta(id, *delta);
             }
     };
     auto onChunk = [&](const char* data, size_t len) {
@@ -350,6 +344,7 @@ std::string PlainPrompt(const std::wstring& text, Language target, std::optional
 
 uint64_t Stream(const TranslationRequest& req, DeltaFn onDelta, DoneFn onDone) {
     uint64_t id = g_nextId.fetch_add(1);
+    const auto start = std::chrono::steady_clock::now();
 
     // 配置快照在调用线程（主线程）拍好带进工作线程
     BackendConfig cfg = BackendConfig::snapshot();
@@ -359,6 +354,9 @@ uint64_t Stream(const TranslationRequest& req, DeltaFn onDelta, DoneFn onDone) {
     if (auto cached = Cache::shared().get(key)) {
         onDelta(id, *cached);
         onDone(id, true, L"");
+        diagnostics::Record("translation", "cacheHit",
+                            cfg.backend == TranslationBackend::OpenAI ? "openai" : "ollama",
+                            {}, {}, 0, 0, (int)req.text.size());
         return id;
     }
 
@@ -368,19 +366,42 @@ uint64_t Stream(const TranslationRequest& req, DeltaFn onDelta, DoneFn onDone) {
         g_active[id] = {cancel};
     }
 
-    std::thread([req, cfg, id, key, cancel, onDelta = std::move(onDelta), onDone = std::move(onDone)] {
+    std::thread([req, cfg, id, key, cancel, start,
+                 onDelta = std::move(onDelta), onDone = std::move(onDone)] {
+        std::optional<std::chrono::steady_clock::time_point> firstToken;
+        DeltaFn trackedDelta = [&](uint64_t requestId, const std::wstring& delta) {
+            if (!delta.empty() && !firstToken) firstToken = std::chrono::steady_clock::now();
+            onDelta(requestId, delta);
+        };
         StreamOutcome out = cfg.backend == TranslationBackend::OpenAI
-                                ? runOpenAI(req, cfg, id, onDelta, *cancel)
-                                : runOllama(req, cfg, id, onDelta, *cancel);
+                                ? runOpenAI(req, cfg, id, trackedDelta, *cancel)
+                                : runOllama(req, cfg, id, trackedDelta, *cancel);
         bool cancelled = cancel->load();
         finishRequest(id);
-        if (cancelled) return;  // 取消的请求不再回调
-        if (out.ok) {
-            std::wstring cleaned = util::Trim(out.full);
-            if (!cleaned.empty()) Cache::shared().set(key, cleaned);
+        const auto end = std::chrono::steady_clock::now();
+        const int totalMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        const int firstMs = firstToken
+            ? (int)std::chrono::duration_cast<std::chrono::milliseconds>(*firstToken - start).count()
+            : -1;
+        const char* backend = cfg.backend == TranslationBackend::OpenAI ? "openai" : "ollama";
+        if (cancelled) {
+            diagnostics::Record("translation", "cancelled", backend, {}, "cancelled",
+                                firstMs, totalMs, (int)req.text.size());
+            return;  // 取消的请求不再回调
+        }
+        const std::wstring cleaned = util::Trim(out.full);
+        if (out.ok && !cleaned.empty()) {
+            Cache::shared().set(key, cleaned);
             onDone(id, true, L"");
+            diagnostics::Record("translation", "success", backend, {}, {},
+                                firstMs, totalMs, (int)req.text.size());
         } else {
-            onDone(id, false, out.error);
+            const bool emptyResponse = out.ok && cleaned.empty();
+            const std::wstring error = emptyResponse ? L"Empty translation" : out.error;
+            onDone(id, false, error);
+            diagnostics::Record("translation", "failure", backend, {},
+                                emptyResponse ? "emptyResponse" : "provider",
+                                firstMs, totalMs, (int)req.text.size());
         }
     }).detach();
 
@@ -429,8 +450,67 @@ std::optional<std::wstring> TranslateFully(const TranslationRequest& req, std::w
     return cleaned;
 }
 
+void CheckHealthAsync(std::function<void(HealthCheckResult)> completion) {
+    const auto start = std::chrono::steady_clock::now();
+    const auto stamp = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    struct State {
+        std::mutex mutex;
+        std::wstring full;
+        std::optional<std::chrono::steady_clock::time_point> first;
+    };
+    auto state = std::make_shared<State>();
+    const std::string backend = Settings::shared().backend == TranslationBackend::OpenAI ? "openai" : "ollama";
+    Stream(
+        {L"TypeTide health check " + std::to_wstring(stamp), Language::English,
+         Language::Chinese, RewriteStyle::Faithful},
+        [state](uint64_t, const std::wstring& delta) {
+            std::lock_guard lock(state->mutex);
+            if (!delta.empty() && !state->first) state->first = std::chrono::steady_clock::now();
+            state->full += delta;
+        },
+        [state, start, backend, completion = std::move(completion)](
+            uint64_t, bool success, const std::wstring& message) mutable {
+            const auto end = std::chrono::steady_clock::now();
+            std::lock_guard lock(state->mutex);
+            HealthCheckResult result;
+            result.ok = success && !util::Trim(state->full).empty();
+            result.message = result.ok ? L"Connected and translated successfully."
+                                       : (message.empty() ? L"No translation returned." : message);
+            result.firstTokenMs = state->first
+                ? (int)std::chrono::duration_cast<std::chrono::milliseconds>(*state->first - start).count()
+                : -1;
+            result.totalMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+            diagnostics::Record("backendHealthCheck", result.ok ? "success" : "failure",
+                                backend, {}, result.ok ? "" : "backend",
+                                result.firstTokenMs, result.totalMs);
+            completion(std::move(result));
+        });
+}
+
 void ClearCacheForTesting() {
     Cache::shared().clear();
+}
+
+std::optional<std::wstring> ParseOpenAISSELine(const std::string& line) {
+    if (line.rfind("data:", 0) != 0) return std::nullopt;
+    const std::string payload = util::Trim(line.substr(5));
+    if (payload == "[DONE]") return std::nullopt;
+    bool ok = false;
+    json::Value value = json::Parse(payload, &ok);
+    if (!ok) return std::nullopt;
+    const json::Value& delta = value["choices"].at(0)["delta"]["content"];
+    if (!delta.isString() || delta.asString().empty()) return std::nullopt;
+    return util::Widen(delta.asString());
+}
+
+std::vector<std::string> AssembleLinesForTesting(const std::vector<std::string>& fragments) {
+    LineAssembler assembler;
+    std::vector<std::string> lines;
+    auto append = [&](const std::string& line) { lines.push_back(line); };
+    for (const auto& fragment : fragments) assembler.feed(fragment.data(), fragment.size(), append);
+    assembler.finish(append);
+    return lines;
 }
 
 } // namespace translator

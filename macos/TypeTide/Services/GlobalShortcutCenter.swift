@@ -46,6 +46,43 @@ struct KeyboardShortcutPreference: Codable, Equatable {
     }
 }
 
+enum ShortcutRegistrationStatus: Equatable {
+    case inactive
+    case notConfigured
+    case registered
+    case duplicate
+    case unavailable(OSStatus)
+
+    var message: String {
+        switch self {
+        case .inactive: return "TypeTide is off"
+        case .notConfigured: return "Not set"
+        case .registered: return "Registered"
+        case .duplicate: return "Must be different from the other shortcut"
+        case .unavailable: return "Unavailable or already used by another app"
+        }
+    }
+
+    var isSuccess: Bool { self == .registered }
+}
+
+enum ShortcutConfiguration {
+    static func isDuplicate(_ first: KeyboardShortcutPreference?,
+                            _ second: KeyboardShortcutPreference?) -> Bool {
+        guard let first, let second else { return false }
+        return first == second
+    }
+
+    static func isReady(read: KeyboardShortcutPreference?,
+                        readStatus: ShortcutRegistrationStatus,
+                        rewrite: KeyboardShortcutPreference?,
+                        rewriteStatus: ShortcutRegistrationStatus) -> Bool {
+        guard read != nil || rewrite != nil else { return false }
+        return (read == nil || readStatus.isSuccess)
+            && (rewrite == nil || rewriteStatus.isSuccess)
+    }
+}
+
 final class GlobalShortcutCenter {
     static let shared = GlobalShortcutCenter()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.xnu.typetide",
@@ -58,7 +95,9 @@ final class GlobalShortcutCenter {
     private init() {}
 
     /// 注册一个热键。同一 id 重复注册会覆盖旧的。
-    func register(id: UInt32, shortcut: KeyboardShortcutPreference, handler: @escaping () -> Void) {
+    @discardableResult
+    func register(id: UInt32, shortcut: KeyboardShortcutPreference,
+                  handler: @escaping () -> Void) -> ShortcutRegistrationStatus {
         installEventHandlerIfNeeded()
         unregister(id: id)
 
@@ -75,10 +114,20 @@ final class GlobalShortcutCenter {
         if status == noErr, let ref {
             hotKeyRefs[id] = ref
             logger.notice("Registered shortcut id=\(id) as \(shortcut.displayString, privacy: .public)")
+            recordRegistration(outcome: "success")
+            return .registered
         } else {
             handlers[id] = nil
             logger.error("Failed to register shortcut id=\(id), status=\(status)")
+            recordRegistration(outcome: "failure", errorCategory: "osStatus_\(status)")
+            return .unavailable(status)
         }
+    }
+
+    private func recordRegistration(outcome: String, errorCategory: String? = nil) {
+        let event = DiagnosticEvent(name: .shortcutRegistration, outcome: outcome,
+                                    errorCategory: errorCategory)
+        Task { await LocalDiagnostics.shared.record(event) }
     }
 
     func unregister(id: UInt32) {

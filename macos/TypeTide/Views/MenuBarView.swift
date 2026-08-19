@@ -25,8 +25,8 @@ struct MenuBarView: View {
 
         Divider()
 
-        Text("Translate selection:  \(AppSettings.readShortcut.displayString)")
-        Text("Rewrite & replace:    \(AppSettings.rewriteShortcut.displayString)")
+        Text("\(AppSettings.readShortcutAction.displayName):  \(AppSettings.readShortcut?.displayString ?? "Not set")")
+        Text("\(AppSettings.rewriteShortcutAction.displayName):  \(AppSettings.rewriteShortcut?.displayString ?? "Not set")")
 
         Divider()
 

@@ -7,8 +7,6 @@
 
 import SwiftUI
 import AppKit
-import TelemetryDeck
-import Sentry
 
 @main
 struct TypeTideApp: App {
@@ -51,7 +49,6 @@ enum SettingsOpener {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    private let firstLaunchKey = "hasCompletedFirstLaunch"
     private var statusItem: NSStatusItem?
     private let statusMenu = NSMenu()
 
@@ -59,14 +56,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // 纯菜单栏：不在 Dock 显示
         NSApp.setActivationPolicy(.accessory)
         installCompactStatusItem()
-
-        // 监控/分析
-        TelemetryDeck.initialize(config: .init(appID: "675A16AE-4E72-4AF8-A128-E1E416B5C3A0"))
-        SentrySDK.start { options in
-            options.dsn = "https://b872f0c33b8952a7f496ccea32dc623d@o4510180697636864.ingest.us.sentry.io/4510180700258304"
-            options.debug = false
-            options.sendDefaultPii = true
-        }
 
         // 系统服务
         _ = SystemServiceProvider.shared
@@ -80,12 +69,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // 若配置的 Ollama 模型未安装，自动挑一个已装模型（避免开箱即败）
         Task { @MainActor in
-            await OllamaModelResolver.ensureValidDefault()
+            if let model = await OllamaModelResolver.ensureValidDefault(), AppSettings.backend == .ollama {
+                await OllamaModelResolver.preload(model)
+            }
         }
 
         // 首次启动：打开设置窗口，让用户立刻看到界面并完成配置
-        if !UserDefaults.standard.bool(forKey: firstLaunchKey) {
-            UserDefaults.standard.set(true, forKey: firstLaunchKey)
+        if !UserDefaults.standard.bool(forKey: AppSettings.Keys.hasCompletedFirstLaunch) {
             Task { @MainActor in
                 // 等 Settings 场景完成注册
                 try? await Task.sleep(nanoseconds: 500_000_000)
@@ -145,11 +135,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusMenu.addItem(enabled)
         statusMenu.addItem(.separator())
 
-        let read = NSMenuItem(title: "Translate selection:  \(AppSettings.readShortcut.displayString)",
+        let read = NSMenuItem(title: "\(AppSettings.readShortcutAction.displayName):  \(AppSettings.readShortcut?.displayString ?? "Not set")",
                               action: nil, keyEquivalent: "")
         read.isEnabled = false
         statusMenu.addItem(read)
-        let rewrite = NSMenuItem(title: "Rewrite & replace:    \(AppSettings.rewriteShortcut.displayString)",
+        let rewrite = NSMenuItem(title: "\(AppSettings.rewriteShortcutAction.displayName):  \(AppSettings.rewriteShortcut?.displayString ?? "Not set")",
                                  action: nil, keyEquivalent: "")
         rewrite.isEnabled = false
         statusMenu.addItem(rewrite)

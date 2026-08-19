@@ -6,6 +6,7 @@
 #include <sstream>
 
 std::wstring Hotkey::displayString() const {
+    if (!isConfigured()) return L"Not set";
     std::wstring s;
     if (modifiers & MOD_CONTROL) s += L"Ctrl+";
     if (modifiers & MOD_SHIFT) s += L"Shift+";
@@ -105,7 +106,7 @@ void Settings::load() {
             UINT modifiers = (UINT)v["modifiers"].asInt((int)hk.modifiers);
             UINT vk = (UINT)v["vk"].asInt((int)hk.vk);
             constexpr UINT allowed = MOD_ALT | MOD_CONTROL | MOD_SHIFT | MOD_WIN;
-            if ((modifiers & ~allowed) == 0 && vk > 0 && vk < 256) {
+            if ((modifiers & ~allowed) == 0 && vk < 256) {
                 hk.modifiers = modifiers;
                 hk.vk = vk;
             }
@@ -113,6 +114,18 @@ void Settings::load() {
     };
     loadHotkey("readShortcut", readShortcut);
     loadHotkey("rewriteShortcut", rewriteShortcut);
+    auto loadAction = [&](const char* key, ShortcutAction fallback) {
+        const std::string value = str(key, "");
+        if (value == "nativePopup") return ShortcutAction::NativePopup;
+        if (value == "foreignPopup") return ShortcutAction::ForeignPopup;
+        if (value == "smartReplace") return ShortcutAction::SmartReplace;
+        if (value == "nativeReplace") return ShortcutAction::NativeReplace;
+        if (value == "foreignReplace") return ShortcutAction::ForeignReplace;
+        if (value == "smartPopup") return ShortcutAction::SmartPopup;
+        return fallback;
+    };
+    readShortcutAction = loadAction("readShortcutAction", ShortcutAction::SmartPopup);
+    rewriteShortcutAction = loadAction("rewriteShortcutAction", ShortcutAction::SmartReplace);
 
     std::string trig = str("selectionTrigger", "none");
     selectionTrigger = trig == "icon" ? SelectionTrigger::Icon
@@ -171,6 +184,19 @@ bool Settings::save() const {
     };
     root["readShortcut"] = hotkeyJson(readShortcut);
     root["rewriteShortcut"] = hotkeyJson(rewriteShortcut);
+    auto actionCode = [](ShortcutAction action) -> std::string {
+        switch (action) {
+        case ShortcutAction::NativePopup: return "nativePopup";
+        case ShortcutAction::ForeignPopup: return "foreignPopup";
+        case ShortcutAction::SmartReplace: return "smartReplace";
+        case ShortcutAction::NativeReplace: return "nativeReplace";
+        case ShortcutAction::ForeignReplace: return "foreignReplace";
+        case ShortcutAction::SmartPopup:
+        default: return "smartPopup";
+        }
+    };
+    root["readShortcutAction"] = actionCode(readShortcutAction);
+    root["rewriteShortcutAction"] = actionCode(rewriteShortcutAction);
 
     root["selectionTrigger"] = selectionTrigger == SelectionTrigger::Icon ? "icon"
                              : selectionTrigger == SelectionTrigger::Auto ? "auto"

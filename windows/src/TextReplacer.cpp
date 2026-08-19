@@ -1,6 +1,7 @@
 #include "TextReplacer.h"
 #include "Clipboard.h"
 #include "Keyboard.h"
+#include "LocalDiagnostics.h"
 #include "Util.h"
 #include <thread>
 
@@ -51,6 +52,7 @@ LRESULT CALLBACK ownerProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
 /// 工作线程主体：设置延迟渲染剪贴板 → 合成粘贴 → 等目标取数据 → 还原剪贴板
 void replaceWorker(const std::wstring& text, bool selectAll) {
+    DWORD started = GetTickCount();
     clipboard::Snapshot saved = clipboard::Take();
 
     static bool registered = [] {
@@ -109,6 +111,9 @@ void replaceWorker(const std::wstring& text, bool selectAll) {
     }
 
     clipboard::Restore(saved);
+    diagnostics::Record("replacement", delayed && !ctx.rendered ? "failure" : "success",
+                        {}, {}, delayed && !ctx.rendered ? "pasteNotConsumed" : "",
+                        -1, (int)(GetTickCount() - started), (int)text.size());
     if (owner) {
         SetWindowLongPtrW(owner, GWLP_USERDATA, 0);
         DestroyWindow(owner);

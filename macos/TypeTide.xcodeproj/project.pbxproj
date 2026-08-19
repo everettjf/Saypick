@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5A84B6A92E9CCE7E00FEC14D /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 5A84B6A82E9CCE7E00FEC14D /* TelemetryDeck */; };
-		5A84B6AC2E9CD07E00FEC14D /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 5A84B6AB2E9CD07E00FEC14D /* Sentry-Dynamic */; };
 		5A86A34F2E9415F300CA8E22 /* Ollama in Frameworks */ = {isa = PBXBuildFile; productRef = 5A86A34E2E9415F300CA8E22 /* Ollama */; };
 /* End PBXBuildFile section */
 
@@ -53,9 +51,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5A84B6AC2E9CD07E00FEC14D /* Sentry-Dynamic in Frameworks */,
 				5A86A34F2E9415F300CA8E22 /* Ollama in Frameworks */,
-				5A84B6A92E9CCE7E00FEC14D /* TelemetryDeck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -129,8 +125,6 @@
 			name = TypeTide;
 			packageProductDependencies = (
 				5A86A34E2E9415F300CA8E22 /* Ollama */,
-				5A84B6A82E9CCE7E00FEC14D /* TelemetryDeck */,
-				5A84B6AB2E9CD07E00FEC14D /* Sentry-Dynamic */,
 			);
 			productName = TypeTide;
 			productReference = 5ACBDEF62E8A12F400DD7984 /* TypeTide.app */;
@@ -164,8 +158,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				5A86A34D2E9415F300CA8E22 /* XCRemoteSwiftPackageReference "ollama-swift" */,
-				5A84B6A72E9CCE7E00FEC14D /* XCRemoteSwiftPackageReference "SwiftSDK" */,
-				5A84B6AA2E9CD07E00FEC14D /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5ACBDEF72E8A12F400DD7984 /* Products */;
@@ -453,22 +445,6 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		5A84B6A72E9CCE7E00FEC14D /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.9.4;
-			};
-		};
-		5A84B6AA2E9CD07E00FEC14D /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.56.2;
-			};
-		};
 		5A86A34D2E9415F300CA8E22 /* XCRemoteSwiftPackageReference "ollama-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mattt/ollama-swift";
@@ -480,16 +456,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		5A84B6A82E9CCE7E00FEC14D /* TelemetryDeck */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 5A84B6A72E9CCE7E00FEC14D /* XCRemoteSwiftPackageReference "SwiftSDK" */;
-			productName = TelemetryDeck;
-		};
-		5A84B6AB2E9CD07E00FEC14D /* Sentry-Dynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 5A84B6AA2E9CD07E00FEC14D /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = "Sentry-Dynamic";
-		};
 		5A86A34E2E9415F300CA8E22 /* Ollama */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 5A86A34D2E9415F300CA8E22 /* XCRemoteSwiftPackageReference "ollama-swift" */;

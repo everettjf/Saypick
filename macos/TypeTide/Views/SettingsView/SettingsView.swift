@@ -11,6 +11,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @State private var selection: PreferencesSection = .general
+    @AppStorage(AppSettings.Keys.hasCompletedFirstLaunch) private var hasCompletedFirstLaunch = false
 
     var body: some View {
         HSplitView {
@@ -27,21 +28,32 @@ struct SettingsView: View {
             }
             .frame(minWidth: 180, idealWidth: 190, maxWidth: 220)
 
-            switch selection {
-            case .general:
-                GeneralSettingsView()
-            case .behavior:
-                BehaviorSettingsView()
-            case .backend:
-                BackendSettingsView()
-            case .language:
-                LanguageSettingsView()
-            case .shortcuts:
-                ShortcutsSettingsView()
-            case .skipApps:
-                SkipAppsSettingsView()
-            case .about:
-                AboutView()
+            if !hasCompletedFirstLaunch && selection == .general {
+                FirstLaunchView { section in
+                    selection = section
+                } finish: {
+                    hasCompletedFirstLaunch = true
+                    selection = .general
+                }
+            } else {
+                switch selection {
+                case .general:
+                    GeneralSettingsView()
+                case .behavior:
+                    BehaviorSettingsView()
+                case .backend:
+                    BackendSettingsView()
+                case .language:
+                    LanguageSettingsView()
+                case .shortcuts:
+                    ShortcutsSettingsView()
+                case .skipApps:
+                    SkipAppsSettingsView()
+                case .diagnostics:
+                    DiagnosticsSettingsView()
+                case .about:
+                    AboutView()
+                }
             }
         }
         .frame(minWidth: 720, minHeight: 460)

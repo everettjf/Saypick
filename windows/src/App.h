@@ -10,6 +10,8 @@
 #include <optional>
 #include <string>
 
+enum class ShortcutAction;
+
 // 主窗口自定义消息
 constexpr UINT WM_APP_TRAY = WM_APP + 1;
 constexpr UINT WM_APP_TR_DELTA = WM_APP + 2;    // wParam=reqId, lParam=std::wstring*（接收方释放）
@@ -29,6 +31,7 @@ public:
 
     bool init(HINSTANCE inst);
     HWND hwnd() const { return hwnd_; }
+    bool shortcutsRegistered() const { return shortcutsReady_; }
 
     /// 根据开关 + 快捷键 + 划词设置重新装配触发（设置变化后调用）
     void applyEnabledState();
@@ -58,10 +61,11 @@ private:
         Language to;
     };
 
-    void handleRead();
-    void handleRewrite();
-    void presentRead(const capture::Capture& cap);
-    void proceedRewrite(const capture::Capture& cap);
+    void performShortcutAction(ShortcutAction action);
+    void handleRead(std::optional<Language> targetOverride = std::nullopt);
+    void handleRewrite(std::optional<Language> targetOverride = std::nullopt);
+    void presentRead(const capture::Capture& cap, std::optional<Language> targetOverride = std::nullopt);
+    void proceedRewrite(const capture::Capture& cap, std::optional<Language> targetOverride = std::nullopt);
     /// 超长输入直接弹错误提示（LLM 又慢又贵，弹窗也放不下）；返回 true = 已拦截
     bool rejectIfTooLong(const capture::Capture& cap);
     Direction resolveDirection(const std::wstring& text, TranslationDirection mode, bool isWrite) const;
@@ -79,5 +83,8 @@ private:
     RewriteStyle currentStyle_ = RewriteStyle::Faithful;
     bool currentReplaceSelectAll_ = false;    // 弹窗 Replace 时是否先全选
     bool hotkeyWarningShown_ = false;
+    bool readShortcutRegistered_ = false;
+    bool rewriteShortcutRegistered_ = false;
+    bool shortcutsReady_ = false;
     UINT taskbarCreatedMsg_ = 0;   // explorer 重启后重挂托盘图标
 };

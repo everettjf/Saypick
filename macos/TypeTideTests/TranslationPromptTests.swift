@@ -5,7 +5,7 @@ final class TranslationPromptTests: XCTestCase {
     func testSystemPromptContainsDirectionAndNoExtraOutputRule() {
         let prompt = TranslationPrompt.system(target: .english, source: .chinese)
 
-        XCTAssertTrue(prompt.contains("from 中文 (Chinese) into English"))
+        XCTAssertTrue(prompt.contains("from Chinese into English"))
         XCTAssertTrue(prompt.contains("Output ONLY the translation"))
         XCTAssertFalse(prompt.contains("professional, formal tone"))
     }

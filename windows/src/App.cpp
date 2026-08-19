@@ -1,5 +1,6 @@
 #include "App.h"
 #include "Hooks.h"
+#include "LocalDiagnostics.h"
 #include "OllamaModels.h"
 #include "PopupWindow.h"
 #include "SelectionIcon.h"
@@ -12,6 +13,8 @@
 #include "Util.h"
 #include <shellapi.h>
 #include <psapi.h>
+#include <memory>
+#include <mutex>
 #include <thread>
 
 namespace {
@@ -66,8 +69,6 @@ bool App::init(HINSTANCE inst) {
     // 首次启动：打开设置窗口，让用户立刻完成配置
     Settings& s = Settings::shared();
     if (!s.hasCompletedFirstLaunch) {
-        s.hasCompletedFirstLaunch = true;
-        s.save();
         openSettings();
     }
 
@@ -85,20 +86,45 @@ void App::applyEnabledState() {
     UnregisterHotKey(hwnd_, kRewriteHotkeyId);
     SelectionMonitor::shared().stop();
     SelectionIcon::shared().hide();
+    readShortcutRegistered_ = false;
+    rewriteShortcutRegistered_ = false;
+    shortcutsReady_ = false;
 
     const Settings& s = Settings::shared();
     if (!s.enabled) return;
 
-    bool ok1 = RegisterHotKey(hwnd_, kReadHotkeyId,
-                              s.readShortcut.modifiers | MOD_NOREPEAT, s.readShortcut.vk);
-    bool ok2 = RegisterHotKey(hwnd_, kRewriteHotkeyId,
-                              s.rewriteShortcut.modifiers | MOD_NOREPEAT, s.rewriteShortcut.vk);
+    if (s.readShortcut.isConfigured() && s.rewriteShortcut.isConfigured()
+        && s.readShortcut == s.rewriteShortcut) {
+        diagnostics::Record("shortcutRegistration", "failure", {}, {}, "duplicate");
+        if (!hotkeyWarningShown_) {
+            hotkeyWarningShown_ = true;
+            MessageBoxW(nullptr,
+                        L"Translate and rewrite must use different shortcuts. Choose a different combination in Settings → Shortcuts.",
+                        L"TypeTide — duplicate shortcuts", MB_OK | MB_ICONWARNING);
+        }
+        return;
+    }
+
+    const bool readConfigured = s.readShortcut.isConfigured();
+    const bool rewriteConfigured = s.rewriteShortcut.isConfigured();
+    bool ok1 = !readConfigured || RegisterHotKey(hwnd_, kReadHotkeyId,
+                                                 s.readShortcut.modifiers | MOD_NOREPEAT,
+                                                 s.readShortcut.vk);
+    bool ok2 = !rewriteConfigured || RegisterHotKey(hwnd_, kRewriteHotkeyId,
+                                                    s.rewriteShortcut.modifiers | MOD_NOREPEAT,
+                                                    s.rewriteShortcut.vk);
+    readShortcutRegistered_ = ok1;
+    rewriteShortcutRegistered_ = ok2;
+    shortcutsReady_ = (readConfigured || rewriteConfigured) && ok1 && ok2;
+    diagnostics::Record("shortcutRegistration", shortcutsReady_ ? "success" : "failure",
+                        {}, {}, shortcutsReady_ ? "" :
+                                  (!readConfigured && !rewriteConfigured ? "notConfigured" : "unavailable"));
     if ((!ok1 || !ok2) && !hotkeyWarningShown_) {
         hotkeyWarningShown_ = true;
         std::wstring unavailable;
-        if (!ok1) unavailable += L"Translate selection: " + s.readShortcut.displayString();
+        if (readConfigured && !ok1) unavailable += L"Translate selection: " + s.readShortcut.displayString();
         if (!ok1 && !ok2) unavailable += L"\n";
-        if (!ok2) unavailable += L"Rewrite & replace: " + s.rewriteShortcut.displayString();
+        if (rewriteConfigured && !ok2) unavailable += L"Rewrite & replace: " + s.rewriteShortcut.displayString();
         std::wstring message = L"These shortcuts could not be registered:\n\n" + unavailable +
                                L"\n\nChoose different shortcuts in Settings → Shortcuts.";
         MessageBoxW(nullptr, message.c_str(),
@@ -146,23 +172,8 @@ void App::quit() {
 
 App::Direction App::resolveDirection(const std::wstring& text, TranslationDirection mode, bool isWrite) const {
     const Settings& s = Settings::shared();
-    Language native = s.nativeLanguage;
-    Language foreign = s.foreignLanguage;
-    switch (mode) {
-    case TranslationDirection::NativeToForeign:
-        return {native, foreign};
-    case TranslationDirection::ForeignToNative:
-        return {foreign, native};
-    case TranslationDirection::Auto:
-    default: {
-        std::optional<Language> detected = lang::Detect(text);
-        Language to;
-        if (detected == native) to = foreign;
-        else if (detected == foreign) to = native;
-        else to = isWrite ? foreign : native;
-        return {detected, to};
-    }
-    }
+    auto route = lang::ResolveDirection(text, mode, isWrite, s.nativeLanguage, s.foreignLanguage);
+    return {route.source, route.target};
 }
 
 // ---------- 跳过列表 ----------
@@ -203,7 +214,20 @@ bool App::foregroundAppSkipped() const {
 
 // ---------- 读·划词翻译 ----------
 
-void App::handleRead() {
+void App::performShortcutAction(ShortcutAction action) {
+    const Settings& s = Settings::shared();
+    switch (action) {
+    case ShortcutAction::NativePopup: handleRead(s.nativeLanguage); break;
+    case ShortcutAction::ForeignPopup: handleRead(s.foreignLanguage); break;
+    case ShortcutAction::NativeReplace: handleRewrite(s.nativeLanguage); break;
+    case ShortcutAction::ForeignReplace: handleRewrite(s.foreignLanguage); break;
+    case ShortcutAction::SmartReplace: handleRewrite(); break;
+    case ShortcutAction::SmartPopup:
+    default: handleRead(); break;
+    }
+}
+
+void App::handleRead(std::optional<Language> targetOverride) {
     const Settings& s = Settings::shared();
     util::Log("handleRead enabled=%d", s.enabled);
     if (!s.enabled || foregroundAppSkipped()) return;
@@ -211,20 +235,26 @@ void App::handleRead() {
     // UIA 快路径在主线程（无睡眠）；拿不到再去工作线程走剪贴板兜底
     // （兜底要等最多 400ms，主线程睡了低级钩子会被系统摘掉）
     if (auto cap = capture::UIAReadSelection()) {
-        presentRead(*cap);
+        diagnostics::Record("selectionCapture", "success", {}, "uia", {}, -1, -1,
+                            (int)cap->text.size());
+        presentRead(*cap, targetOverride);
         return;
     }
     HWND hwnd = hwnd_;
-    std::thread([hwnd] {
+    std::thread([hwnd, targetOverride] {
         auto copied = capture::ClipboardFallbackCopy();
         capture::Capture* cap = nullptr;
         if (copied) {
+            diagnostics::Record("selectionCapture", "success", {}, "clipboardFallback", {}, -1, -1,
+                                (int)copied->size());
             cap = new capture::Capture;
             cap->text = *copied;
             cap->anchor = capture::CursorAnchor();
             cap->hasAnchor = true;
         }
-        if (!PostMessageW(hwnd, WM_APP_READ_CAPTURED, 0, (LPARAM)cap)) delete cap;
+        else diagnostics::Record("selectionCapture", "failure");
+        if (!PostMessageW(hwnd, WM_APP_READ_CAPTURED,
+                          targetOverride ? (WPARAM)((int)*targetOverride + 1) : 0, (LPARAM)cap)) delete cap;
     }).detach();
 }
 
@@ -238,11 +268,12 @@ bool App::rejectIfTooLong(const capture::Capture& cap) {
     return true;
 }
 
-void App::presentRead(const capture::Capture& cap) {
+void App::presentRead(const capture::Capture& cap, std::optional<Language> targetOverride) {
     if (rejectIfTooLong(cap)) return;
     const Settings& s = Settings::shared();
     RECT anchor = cap.hasAnchor ? cap.anchor : capture::CursorAnchor();
-    Direction dir = resolveDirection(cap.text, s.readDirection, false);
+    Direction dir = targetOverride ? Direction{lang::Detect(cap.text), *targetOverride}
+                                   : resolveDirection(cap.text, s.readDirection, false);
 
     currentSource_ = dir.from;
     currentText_ = cap.text;
@@ -293,35 +324,42 @@ void App::startStream(const std::wstring& text, std::optional<Language> from, La
 
 // ---------- 写·输入改写 ----------
 
-void App::handleRewrite() {
+void App::handleRewrite(std::optional<Language> targetOverride) {
     const Settings& s = Settings::shared();
     if (!s.enabled || foregroundAppSkipped()) return;
 
     // 与 handleRead 同理：UIA 主线程快路径，剪贴板兜底进工作线程
     if (auto cap = capture::UIACaptureForRewrite()) {
-        proceedRewrite(*cap);
+        diagnostics::Record("selectionCapture", "success", {}, "uia", {}, -1, -1,
+                            (int)cap->text.size());
+        proceedRewrite(*cap, targetOverride);
         return;
     }
     HWND hwnd = hwnd_;
-    std::thread([hwnd] {
+    std::thread([hwnd, targetOverride] {
         auto copied = capture::ClipboardFallbackCopy();
         capture::Capture* cap = nullptr;
         if (copied) {
+            diagnostics::Record("selectionCapture", "success", {}, "clipboardFallback", {}, -1, -1,
+                                (int)copied->size());
             cap = new capture::Capture;
             cap->text = *copied;
             cap->anchor = capture::CursorAnchor();
             cap->hasAnchor = true;
         }
-        if (!PostMessageW(hwnd, WM_APP_REWRITE_CAPTURED, 0, (LPARAM)cap)) delete cap;
+        else diagnostics::Record("selectionCapture", "failure");
+        if (!PostMessageW(hwnd, WM_APP_REWRITE_CAPTURED,
+                          targetOverride ? (WPARAM)((int)*targetOverride + 1) : 0, (LPARAM)cap)) delete cap;
     }).detach();
 }
 
-void App::proceedRewrite(const capture::Capture& capIn) {
+void App::proceedRewrite(const capture::Capture& capIn, std::optional<Language> targetOverride) {
     if (rejectIfTooLong(capIn)) return;
     const Settings& s = Settings::shared();
     const capture::Capture* cap = &capIn;
 
-    Direction dir = resolveDirection(cap->text, s.rewriteDirection, true);
+    Direction dir = targetOverride ? Direction{lang::Detect(cap->text), *targetOverride}
+                                   : resolveDirection(cap->text, s.rewriteDirection, true);
 
     if (s.rewritePreview) {
         // 先预览：弹窗显示译文 + Replace（整框改写替换时先全选）
@@ -356,27 +394,38 @@ void App::proceedRewrite(const capture::Capture& capIn) {
 
         startStream(cap->text, dir.from, dir.to, s.rewriteStyle);
     } else {
-        // 直接替换：后台完整翻译 → 回主线程粘贴
+        // 直接替换：在主线程拍配置快照并启动异步流，完成后回主线程粘贴。
         HWND hwnd = hwnd_;
         capture::Capture c = *cap;
         Direction d = dir;
         RewriteStyle style = s.rewriteStyle;
-        std::thread([hwnd, c, d, style] {
-            std::wstring err;
-            auto result = translator::TranslateFully({c.text, d.from, d.to, style}, &err);
-            auto* msg = new RewriteResult{
-                result.has_value(),
-                result.value_or(L""),
-                err,
-                c.isWholeField,
-                c.hasAnchor ? c.anchor : capture::CursorAnchor(),
-                true,
-                c.text,
-                d.to,
-            };
-            if (!PostMessageW(hwnd, WM_APP_REWRITE_DONE, 0, (LPARAM)msg))
-                delete msg;
-        }).detach();
+        struct RewriteStreamState {
+            std::mutex mutex;
+            std::wstring result;
+        };
+        auto state = std::make_shared<RewriteStreamState>();
+        translator::Stream(
+            {c.text, d.from, d.to, style},
+            [state](uint64_t, const std::wstring& delta) {
+                std::lock_guard lock(state->mutex);
+                state->result += delta;
+            },
+            [hwnd, state, c, d](uint64_t, bool ok, const std::wstring& error) {
+                std::lock_guard lock(state->mutex);
+                std::wstring cleaned = util::Trim(state->result);
+                const bool emptyResponse = ok && cleaned.empty();
+                auto* msg = new RewriteResult{
+                    ok && !cleaned.empty(),
+                    std::move(cleaned),
+                    emptyResponse ? L"Empty translation" : error,
+                    c.isWholeField,
+                    c.hasAnchor ? c.anchor : capture::CursorAnchor(),
+                    true,
+                    c.text,
+                    d.to,
+                };
+                if (!PostMessageW(hwnd, WM_APP_REWRITE_DONE, 0, (LPARAM)msg)) delete msg;
+            });
     }
 }
 
@@ -395,8 +444,8 @@ void App::showErrorPopup(const std::wstring& original, Language target, RECT anc
 LRESULT App::handle(UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_HOTKEY:
-        if (wp == kReadHotkeyId) handleRead();
-        else if (wp == kRewriteHotkeyId) handleRewrite();
+        if (wp == kReadHotkeyId) performShortcutAction(Settings::shared().readShortcutAction);
+        else if (wp == kRewriteHotkeyId) performShortcutAction(Settings::shared().rewriteShortcutAction);
         return 0;
 
     case WM_APP_TRAY: {
@@ -460,7 +509,8 @@ LRESULT App::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_APP_READ_CAPTURED: {
         auto* cap = (capture::Capture*)lp;
         if (cap) {
-            presentRead(*cap);
+            std::optional<Language> target = wp ? std::optional<Language>((Language)((int)wp - 1)) : std::nullopt;
+            presentRead(*cap, target);
             delete cap;
         }
         return 0;
@@ -469,7 +519,8 @@ LRESULT App::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_APP_REWRITE_CAPTURED: {
         auto* cap = (capture::Capture*)lp;
         if (cap) {
-            proceedRewrite(*cap);
+            std::optional<Language> target = wp ? std::optional<Language>((Language)((int)wp - 1)) : std::nullopt;
+            proceedRewrite(*cap, target);
             delete cap;
         }
         return 0;

@@ -17,9 +17,20 @@ final class TriggerController {
 
     private let readHotkeyID: UInt32 = 1
     private let rewriteHotkeyID: UInt32 = 2
+    private let maximumInputCharacters = 5_000
 
     private var streamTask: Task<Void, Never>?
     private var rewriteTask: Task<Void, Never>?
+
+    private(set) var readShortcutStatus: ShortcutRegistrationStatus = .inactive
+    private(set) var rewriteShortcutStatus: ShortcutRegistrationStatus = .inactive
+
+    var shortcutsReady: Bool {
+        ShortcutConfiguration.isReady(
+            read: AppSettings.readShortcut, readStatus: readShortcutStatus,
+            rewrite: AppSettings.rewriteShortcut, rewriteStatus: rewriteShortcutStatus
+        )
+    }
 
     /// 母语（读模式的目标 / 写模式的源）
     private var nativeLanguage: Language { LanguageConfig.sourceLanguage }
@@ -37,14 +48,32 @@ final class TriggerController {
         GlobalShortcutCenter.shared.unregisterAll()
         SelectionMonitor.shared.stop()
         SelectionIconWindow.shared.hide()
+        readShortcutStatus = .inactive
+        rewriteShortcutStatus = .inactive
 
         guard AppSettings.isEnabled else { return }
 
-        GlobalShortcutCenter.shared.register(id: readHotkeyID, shortcut: AppSettings.readShortcut) { [weak self] in
-            Task { @MainActor in self?.handleRead() }
+        let readShortcut = AppSettings.readShortcut
+        let rewriteShortcut = AppSettings.rewriteShortcut
+        if ShortcutConfiguration.isDuplicate(readShortcut, rewriteShortcut) {
+            readShortcutStatus = .duplicate
+            rewriteShortcutStatus = .duplicate
+            return
         }
-        GlobalShortcutCenter.shared.register(id: rewriteHotkeyID, shortcut: AppSettings.rewriteShortcut) { [weak self] in
-            Task { @MainActor in self?.handleRewrite() }
+
+        if let readShortcut {
+            readShortcutStatus = GlobalShortcutCenter.shared.register(id: readHotkeyID, shortcut: readShortcut) { [weak self] in
+                Task { @MainActor in self?.performShortcutAction(AppSettings.readShortcutAction) }
+            }
+        } else {
+            readShortcutStatus = .notConfigured
+        }
+        if let rewriteShortcut {
+            rewriteShortcutStatus = GlobalShortcutCenter.shared.register(id: rewriteHotkeyID, shortcut: rewriteShortcut) { [weak self] in
+                Task { @MainActor in self?.performShortcutAction(AppSettings.rewriteShortcutAction) }
+            }
+        } else {
+            rewriteShortcutStatus = .notConfigured
         }
 
         setupSelectionTrigger()
@@ -75,7 +104,12 @@ final class TriggerController {
 
     // MARK: - 读·划词翻译
 
-    func handleRead() {
+    private func performShortcutAction(_ action: ShortcutAction) {
+        if action.usesPopup { handleRead(action: action) }
+        else { handleRewrite(action: action) }
+    }
+
+    func handleRead(action: ShortcutAction = .smartPopup) {
         guard AppSettings.isEnabled else { return }
         guard AccessibilityPermission.isGranted else {
             AccessibilityPermission.requestAndOpenSystemSettings()
@@ -84,10 +118,15 @@ final class TriggerController {
         guard !AppSettings.shouldSkipFrontmostApplication() else { return }
         Task { @MainActor in
             guard let cap = await SelectionCapture.readSelection() else {
-                presentCaptureFailure("Couldn’t read the selected text. Select some text and try again.")
+                presentCaptureFailure("Couldn’t read selected text. The app may not expose its selection and the clipboard fallback received no text.")
                 return
             }
-            presentRead(text: cap.text, element: cap.element, range: cap.range)
+            guard cap.text.count <= maximumInputCharacters else {
+                presentCaptureFailure("The selection is too long (\(cap.text.count) characters; maximum \(maximumInputCharacters)).")
+                return
+            }
+            presentRead(text: cap.text, element: cap.element, range: cap.range,
+                        targetOverride: targetOverride(for: action))
         }
     }
 
@@ -100,10 +139,14 @@ final class TriggerController {
     }
 
     /// 显示读翻译弹窗并流式填充（供快捷键 / 图标 / 自动模式共用）。
-    func presentRead(text: String, element: AXUIElement?, range: CFRange?) {
+    func presentRead(text: String, element: AXUIElement?, range: CFRange?, targetOverride: Language? = nil,
+                     dismissOnInteraction: Bool = true) {
         let anchor = PopupPositioner.anchorRect(element: element, range: range)
-        let dir = resolveDirection(text: text, mode: AppSettings.readDirection, isWrite: false)
-        let model = PopupController.shared.show(original: text, target: dir.to, anchor: anchor, onReplace: nil)
+        let dir = targetOverride.map { (from: Language.detect(in: text), to: $0) }
+            ?? resolveDirection(text: text, mode: AppSettings.readDirection, isWrite: false)
+        let model = PopupController.shared.show(original: text, target: dir.to, anchor: anchor,
+                                                onReplace: nil, dismissOnInteraction: dismissOnInteraction)
+        model.onDismiss = { [weak self] in self?.streamTask?.cancel() }
         model.onReplace = { [weak model] in
             guard let model, !model.translation.isEmpty else { return }
             Task { @MainActor in
@@ -127,25 +170,11 @@ final class TriggerController {
     /// - auto：检测选中文字语言；母语→外语、外语→母语、第三种/检测不确定→（读:母语 / 写:外语）。
     /// - 固定模式：跳过检测，直接用配置好的方向（对中英混排等检测易错场景更稳）。
     private func resolveDirection(text: String, mode: TranslationDirection, isWrite: Bool) -> (from: Language?, to: Language) {
-        let native = nativeLanguage
-        let foreign = foreignLanguage
-        switch mode {
-        case .nativeToForeign:
-            return (native, foreign)
-        case .foreignToNative:
-            return (foreign, native)
-        case .auto:
-            let detected = Language.detect(in: text)
-            let to: Language
-            if detected == native {
-                to = foreign
-            } else if detected == foreign {
-                to = native
-            } else {
-                to = isWrite ? foreign : native
-            }
-            return (detected, to)
-        }
+        let route = TranslationRouting.resolve(
+            text: text, mode: mode, isWrite: isWrite,
+            native: nativeLanguage, foreign: foreignLanguage
+        )
+        return (route.source, route.target)
     }
 
     /// 共用的流式翻译，把结果写入弹窗 model（读 / 改写预览 / 弹窗重定向复用）。
@@ -178,7 +207,7 @@ final class TriggerController {
 
     // MARK: - 写·输入改写
 
-    func handleRewrite() {
+    func handleRewrite(action: ShortcutAction = .smartReplace) {
         guard AppSettings.isEnabled else { return }
         guard AccessibilityPermission.isGranted else {
             AccessibilityPermission.requestAndOpenSystemSettings()
@@ -187,14 +216,23 @@ final class TriggerController {
         guard !AppSettings.shouldSkipFrontmostApplication() else { return }
         rewriteTask?.cancel()
         rewriteTask = Task { @MainActor [self] in
-            guard let cap = await SelectionCapture.captureForRewrite() else { return }
+            guard let cap = await SelectionCapture.captureForRewrite() else {
+                presentCaptureFailure("Couldn’t read text to rewrite. Select text, or place the cursor in an editable text field, then try again.")
+                return
+            }
+            guard cap.text.count <= maximumInputCharacters else {
+                presentCaptureFailure("The text is too long (\(cap.text.count) characters; maximum \(maximumInputCharacters)).")
+                return
+            }
             let style = AppSettings.rewriteStyle
-            let dir = resolveDirection(text: cap.text, mode: AppSettings.rewriteDirection, isWrite: true)
+            let dir = targetOverride(for: action).map { (from: Language.detect(in: cap.text), to: $0) }
+                ?? resolveDirection(text: cap.text, mode: AppSettings.rewriteDirection, isWrite: true)
 
             if AppSettings.rewritePreview {
                 // 先预览：弹窗显示译文 + Replace 按钮（顶部可改目标语言）
                 let anchor = PopupPositioner.anchorRect(element: cap.element, range: cap.selectedRange)
                 let model = PopupController.shared.show(original: cap.text, target: dir.to, anchor: anchor, onReplace: nil)
+                model.onDismiss = { [weak self] in self?.streamTask?.cancel() }
                 model.onReplace = { [weak model] in
                     guard let model, !model.translation.isEmpty else { return }
                     Task { @MainActor in
@@ -220,6 +258,14 @@ final class TriggerController {
                     model.failTranslation((error as? TranslationError)?.errorDescription ?? error.localizedDescription)
                 }
             }
+        }
+    }
+
+    private func targetOverride(for action: ShortcutAction) -> Language? {
+        switch action {
+        case .nativePopup, .nativeReplace: return nativeLanguage
+        case .foreignPopup, .foreignReplace: return foreignLanguage
+        case .smartPopup, .smartReplace: return nil
         }
     }
 }

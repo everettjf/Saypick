@@ -77,15 +77,8 @@ struct OpenAIProvider: TranslationProvider {
                     }
                     for try await line in bytes.lines {
                         if Task.isCancelled { break }
-                        guard line.hasPrefix("data:") else { continue }
-                        let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
-                        if payload == "[DONE]" { break }
-                        guard let data = payload.data(using: .utf8),
-                              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                              let choices = json["choices"] as? [[String: Any]],
-                              let delta = choices.first?["delta"] as? [String: Any],
-                              let content = delta["content"] as? String else { continue }
-                        continuation.yield(content)
+                        if line.dropFirst(5).trimmingCharacters(in: .whitespaces) == "[DONE]" { break }
+                        if let content = OpenAISSEDecoder.content(from: line) { continuation.yield(content) }
                     }
                     continuation.finish()
                 } catch {

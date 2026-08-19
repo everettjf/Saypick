@@ -7,6 +7,7 @@
 //
 #pragma once
 #include <windows.h>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -29,5 +30,11 @@ bool ApplyResolvedModels(const std::vector<std::wstring>& installed);
 
 /// 同步版自动纠正（自检用；网络阻塞，勿在主线程调）。
 bool EnsureValidDefault();
+
+/// Largest installed model that should fit comfortably in the supplied physical memory.
+/// Returns the first model only when no tag exposes a parameter count such as `:7b`.
+std::wstring RecommendedForMemory(const std::vector<std::wstring>& installed,
+                                  uint64_t physicalMemoryBytes,
+                                  double* maximumParameterBillions = nullptr);
 
 } // namespace ollamamodels

@@ -63,9 +63,13 @@ struct GeneralSettingsView: View {
 
             Section {
                 SettingsLabel(symbol: "text.magnifyingglass", color: .blue,
-                              title: "Select text, then press \(AppSettings.readShortcut.displayString) to see the translation.")
+                              title: AppSettings.readShortcut.map {
+                                  "Select text, then press \($0.displayString) to run its configured action."
+                              } ?? "The selection shortcut is not set. Configure it in Shortcuts if needed.")
                 SettingsLabel(symbol: "arrow.left.arrow.right", color: .green,
-                              title: "Type in your language, then press \(AppSettings.rewriteShortcut.displayString) to replace it with the translation.")
+                              title: AppSettings.rewriteShortcut.map {
+                                  "Type or select text, then press \($0.displayString) to run its configured action."
+                              } ?? "The rewrite shortcut is not set. Configure it in Shortcuts if needed.")
             } header: {
                 SettingsSectionHeader(symbol: "book.fill", color: .purple, title: "How to use")
             }

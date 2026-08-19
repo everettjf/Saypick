@@ -13,15 +13,17 @@ enum Keyboard {
     static let vKey: CGKeyCode = 9
 
     /// 发送一次按键，可带 ⌘ 修饰。
-    static func press(_ keyCode: CGKeyCode, command: Bool = false) {
+    @discardableResult
+    static func press(_ keyCode: CGKeyCode, command: Bool = false) -> Bool {
         let source = CGEventSource(stateID: .combinedSessionState)
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
+              let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return false }
         if command {
             down.flags = .maskCommand
             up.flags = .maskCommand
         }
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
+        return true
     }
 }

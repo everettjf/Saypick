@@ -4,9 +4,31 @@
 #include "Settings.h"
 #include "Util.h"
 #include <algorithm>
+#include <cstdlib>
+#include <cwchar>
+#include <cwctype>
+#include <limits>
 #include <thread>
 
 namespace ollamamodels {
+
+namespace {
+double parameterBillions(const std::wstring& model) {
+    std::wstring lower = util::ToLower(model);
+    size_t b = lower.find(L'b');
+    while (b != std::wstring::npos) {
+        size_t start = b;
+        while (start > 0 && (iswdigit(lower[start - 1]) || lower[start - 1] == L'.')) --start;
+        if (start < b && (start == 0 || lower[start - 1] == L':' || lower[start - 1] == L'_' || lower[start - 1] == L'-')) {
+            wchar_t* end = nullptr;
+            double value = std::wcstod(lower.c_str() + start, &end);
+            if (end == lower.c_str() + b && value > 0) return value;
+        }
+        b = lower.find(L'b', b + 1);
+    }
+    return -1;
+}
+} // namespace
 
 std::vector<std::wstring> ListInstalled(const std::string& host, int port, std::wstring* error) {
     std::wstring url = util::Widen(host) + L":" + std::to_wstring(port) + L"/api/tags";
@@ -88,6 +110,27 @@ bool EnsureValidDefault() {
     if (s.backend != TranslationBackend::Ollama) return false;
     std::wstring error;
     return ApplyResolvedModels(ListInstalled(s.ollamaHost, s.ollamaPort, &error));
+}
+
+std::wstring RecommendedForMemory(const std::vector<std::wstring>& installed,
+                                  uint64_t physicalMemoryBytes,
+                                  double* maximumParameterBillions) {
+    if (installed.empty()) return {};
+    const double gib = (double)physicalMemoryBytes / 1073741824.0;
+    const double cap = gib < 8 ? 3 : gib < 16 ? 7 : gib < 32 ? 14 : 32;
+    if (maximumParameterBillions) *maximumParameterBillions = cap;
+
+    const std::wstring* best = nullptr;
+    double bestSize = -1;
+    const std::wstring* smallest = nullptr;
+    double smallestSize = std::numeric_limits<double>::max();
+    for (const auto& model : installed) {
+        const double size = parameterBillions(model);
+        if (size <= 0) continue;
+        if (size < smallestSize) { smallest = &model; smallestSize = size; }
+        if (size <= cap && size > bestSize) { best = &model; bestSize = size; }
+    }
+    return best ? *best : smallest ? *smallest : installed.front();
 }
 
 } // namespace ollamamodels

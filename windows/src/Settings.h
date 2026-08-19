@@ -17,12 +17,22 @@ enum class SelectionTrigger {
     Auto,  // 划词后直接弹出翻译
 };
 
+enum class ShortcutAction {
+    SmartPopup,
+    NativePopup,
+    ForeignPopup,
+    SmartReplace,
+    NativeReplace,
+    ForeignReplace,
+};
+
 /// 全局快捷键（RegisterHotKey 语义）
 struct Hotkey {
     UINT modifiers = MOD_ALT;  // MOD_ALT / MOD_CONTROL / MOD_SHIFT / MOD_WIN 组合
     UINT vk = 'D';
 
     std::wstring displayString() const;
+    bool isConfigured() const { return vk != 0; }
     bool operator==(const Hotkey&) const = default;
 };
 
@@ -49,6 +59,8 @@ struct Settings {
     // 快捷键
     Hotkey readShortcut{MOD_ALT, 'D'};
     Hotkey rewriteShortcut{MOD_ALT, 'R'};
+    ShortcutAction readShortcutAction = ShortcutAction::SmartPopup;
+    ShortcutAction rewriteShortcutAction = ShortcutAction::SmartReplace;
 
     // 行为
     SelectionTrigger selectionTrigger = SelectionTrigger::None;

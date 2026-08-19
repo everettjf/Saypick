@@ -7,6 +7,46 @@
 
 import AppKit
 
+struct StoredShortcutPreference: Codable {
+    let shortcut: KeyboardShortcutPreference?
+
+    private enum CodingKeys: String, CodingKey { case shortcut }
+
+    init(shortcut: KeyboardShortcutPreference?) {
+        self.shortcut = shortcut
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        guard container.contains(.shortcut) else {
+            throw DecodingError.keyNotFound(
+                CodingKeys.shortcut,
+                .init(codingPath: decoder.codingPath,
+                      debugDescription: "Stored shortcut wrapper requires a shortcut key")
+            )
+        }
+        shortcut = try container.decodeIfPresent(KeyboardShortcutPreference.self, forKey: .shortcut)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let shortcut {
+            try container.encode(shortcut, forKey: .shortcut)
+        } else {
+            try container.encodeNil(forKey: .shortcut)
+        }
+    }
+
+    static func decode(_ data: Data,
+                       defaultValue: KeyboardShortcutPreference) -> KeyboardShortcutPreference? {
+        if let stored = try? JSONDecoder().decode(Self.self, from: data) {
+            return stored.shortcut
+        }
+        // Migration: older releases encoded KeyboardShortcutPreference directly.
+        return (try? JSONDecoder().decode(KeyboardShortcutPreference.self, from: data)) ?? defaultValue
+    }
+}
+
 /// 翻译后端
 enum TranslationBackend: String, CaseIterable, Identifiable {
     case ollama
@@ -33,6 +73,33 @@ enum SelectionTrigger: String, CaseIterable, Identifiable {
         case .none: return "Off (shortcut only)"
         case .icon: return "Show floating icon"
         case .auto: return "Auto-translate"
+        }
+    }
+}
+
+enum ShortcutAction: String, CaseIterable, Identifiable {
+    case smartPopup
+    case nativePopup
+    case foreignPopup
+    case smartReplace
+    case nativeReplace
+    case foreignReplace
+
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .smartPopup: return "Smart translate · popup"
+        case .nativePopup: return "Translate to native language · popup"
+        case .foreignPopup: return "Translate to foreign language · popup"
+        case .smartReplace: return "Smart translate · replace"
+        case .nativeReplace: return "Translate to native language · replace"
+        case .foreignReplace: return "Translate to foreign language · replace"
+        }
+    }
+    var usesPopup: Bool {
+        switch self {
+        case .smartPopup, .nativePopup, .foreignPopup: return true
+        case .smartReplace, .nativeReplace, .foreignReplace: return false
         }
     }
 }
@@ -66,6 +133,9 @@ enum RewriteStyle: String, CaseIterable, Identifiable {
 
 /// 全局设置。非 View 代码用静态访问；View 用 @AppStorage 直接绑定同名 key。
 enum AppSettings {
+    static let defaultReadShortcut = KeyboardShortcutPreference(keyCode: 2, modifiers: [.option])
+    static let defaultRewriteShortcut = KeyboardShortcutPreference(keyCode: 15, modifiers: [.option])
+
     enum Keys {
         static let enabled = "isTypeTideEnabled"
         static let backend = "translationBackend"
@@ -82,6 +152,8 @@ enum AppSettings {
         // 触发快捷键
         static let readShortcut = "readShortcut"
         static let rewriteShortcut = "rewriteShortcut"
+        static let readShortcutAction = "readShortcutAction"
+        static let rewriteShortcutAction = "rewriteShortcutAction"
 
         // 翻译方向（读 / 写 各自独立；默认 auto 双向）
         static let readDirection = "readDirection"
@@ -92,6 +164,7 @@ enum AppSettings {
         static let rewritePreview = "rewritePreview"
         static let rewriteStyle = "rewriteStyle"
         static let skipApps = "appSkipList"
+        static let hasCompletedFirstLaunch = "hasCompletedFirstLaunch"
     }
 
     private static let d = UserDefaults.standard
@@ -112,8 +185,21 @@ enum AppSettings {
         set { d.set(newValue, forKey: Keys.openAIBaseURL) }
     }
     static var openAIKey: String {
-        get { d.string(forKey: Keys.openAIKey) ?? "" }
-        set { d.set(newValue, forKey: Keys.openAIKey) }
+        get {
+            let stored = Credentials.cloudAPIKey()
+            if !stored.isEmpty { return stored }
+            // One-time migration from legacy plaintext UserDefaults storage.
+            let legacy = d.string(forKey: Keys.openAIKey) ?? ""
+            if !legacy.isEmpty, Credentials.saveCloudAPIKey(legacy) {
+                d.removeObject(forKey: Keys.openAIKey)
+            }
+            return legacy
+        }
+        set {
+            if Credentials.saveCloudAPIKey(newValue) {
+                d.removeObject(forKey: Keys.openAIKey)
+            }
+        }
     }
     static var openAIModel: String {
         get { d.string(forKey: Keys.openAIModel) ?? "gpt-4o-mini" }
@@ -129,13 +215,21 @@ enum AppSettings {
     static var ollamaPort: Int { OllamaConfig.port }
 
     // MARK: 快捷键
-    static var readShortcut: KeyboardShortcutPreference {
-        get { shortcut(forKey: Keys.readShortcut) ?? .init(keyCode: 2, modifiers: [.option]) }   // ⌥D
+    static var readShortcut: KeyboardShortcutPreference? {
+        get { shortcut(forKey: Keys.readShortcut, defaultValue: defaultReadShortcut) }   // ⌥D
         set { saveShortcut(newValue, forKey: Keys.readShortcut) }
     }
-    static var rewriteShortcut: KeyboardShortcutPreference {
-        get { shortcut(forKey: Keys.rewriteShortcut) ?? .init(keyCode: 15, modifiers: [.option]) } // ⌥R
+    static var rewriteShortcut: KeyboardShortcutPreference? {
+        get { shortcut(forKey: Keys.rewriteShortcut, defaultValue: defaultRewriteShortcut) } // ⌥R
         set { saveShortcut(newValue, forKey: Keys.rewriteShortcut) }
+    }
+    static var readShortcutAction: ShortcutAction {
+        get { ShortcutAction(rawValue: d.string(forKey: Keys.readShortcutAction) ?? "") ?? .smartPopup }
+        set { d.set(newValue.rawValue, forKey: Keys.readShortcutAction) }
+    }
+    static var rewriteShortcutAction: ShortcutAction {
+        get { ShortcutAction(rawValue: d.string(forKey: Keys.rewriteShortcutAction) ?? "") ?? .smartReplace }
+        set { d.set(newValue.rawValue, forKey: Keys.rewriteShortcutAction) }
     }
 
     // MARK: 翻译方向
@@ -184,12 +278,14 @@ enum AppSettings {
         }
     }
 
-    private static func shortcut(forKey key: String) -> KeyboardShortcutPreference? {
-        guard let data = d.data(forKey: key),
-              let s = try? JSONDecoder().decode(KeyboardShortcutPreference.self, from: data) else { return nil }
-        return s
+    private static func shortcut(forKey key: String,
+                                 defaultValue: KeyboardShortcutPreference) -> KeyboardShortcutPreference? {
+        guard let data = d.data(forKey: key) else { return defaultValue }
+        return StoredShortcutPreference.decode(data, defaultValue: defaultValue)
     }
-    private static func saveShortcut(_ s: KeyboardShortcutPreference, forKey key: String) {
-        if let data = try? JSONEncoder().encode(s) { d.set(data, forKey: key) }
+    private static func saveShortcut(_ shortcut: KeyboardShortcutPreference?, forKey key: String) {
+        if let data = try? JSONEncoder().encode(StoredShortcutPreference(shortcut: shortcut)) {
+            d.set(data, forKey: key)
+        }
     }
 }

@@ -15,6 +15,12 @@ struct RewriteCapture {
     let isWholeField: Bool
     let element: AXUIElement?
     let selectedRange: CFRange?
+    let method: CaptureMethod
+}
+
+enum CaptureMethod: String {
+    case accessibility
+    case clipboardFallback
 }
 
 enum SelectionCapture {
@@ -23,17 +29,20 @@ enum SelectionCapture {
 
     /// 读模式取词：AX 选区优先，兜底复制。返回 (文字, 元素, 选区range) 供定位。
     @MainActor
-    static func readSelection() async -> (text: String, element: AXUIElement?, range: CFRange?)? {
+    static func readSelection() async -> (text: String, element: AXUIElement?, range: CFRange?, method: CaptureMethod)? {
         let element = focusedElement()
         if let element {
             if let t = axSelectedText(element), !t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return (t, element, axSelectedRange(element))
+                recordCapture(outcome: "success", method: .accessibility, characterCount: t.count)
+                return (t, element, axSelectedRange(element), .accessibility)
             }
         }
         if let copied = await copyViaPasteboard(),
            !copied.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return (copied, element, element.flatMap { axSelectedRange($0) })
+            recordCapture(outcome: "success", method: .clipboardFallback, characterCount: copied.count)
+            return (copied, element, element.flatMap { axSelectedRange($0) }, .clipboardFallback)
         }
+        recordCapture(outcome: "failure", method: nil, characterCount: nil)
         return nil
     }
 
@@ -46,19 +55,26 @@ enum SelectionCapture {
             if let range = axSelectedRange(element), range.length > 0,
                let sel = axSelectedText(element),
                !sel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return RewriteCapture(text: sel, isWholeField: false, element: element, selectedRange: range)
+                recordCapture(outcome: "success", method: .accessibility, characterCount: sel.count)
+                return RewriteCapture(text: sel, isWholeField: false, element: element,
+                                      selectedRange: range, method: .accessibility)
             }
             // 无选区 → 改整个输入框
             if let value = axValue(element),
                !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return RewriteCapture(text: value, isWholeField: true, element: element, selectedRange: nil)
+                recordCapture(outcome: "success", method: .accessibility, characterCount: value.count)
+                return RewriteCapture(text: value, isWholeField: true, element: element,
+                                      selectedRange: nil, method: .accessibility)
             }
         }
         // AX 拿不到 → 兜底复制（按选区处理）
         if let copied = await copyViaPasteboard(),
            !copied.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return RewriteCapture(text: copied, isWholeField: false, element: nil, selectedRange: nil)
+            recordCapture(outcome: "success", method: .clipboardFallback, characterCount: copied.count)
+            return RewriteCapture(text: copied, isWholeField: false, element: nil,
+                                  selectedRange: nil, method: .clipboardFallback)
         }
+        recordCapture(outcome: "failure", method: nil, characterCount: nil)
         return nil
     }
 
@@ -118,5 +134,15 @@ enum SelectionCapture {
         }
         PasteboardHelper.restore(saved)
         return result
+    }
+
+    private static func recordCapture(outcome: String, method: CaptureMethod?, characterCount: Int?) {
+        let event = DiagnosticEvent(
+            name: .selectionCapture,
+            outcome: outcome,
+            captureMethod: method?.rawValue,
+            inputCharacterCount: characterCount
+        )
+        Task { await LocalDiagnostics.shared.record(event) }
     }
 }

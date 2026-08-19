@@ -9,8 +9,7 @@ import AppKit
 
 enum PasteboardHelper {
     /// 深拷贝当前剪贴板所有 item。
-    static func snapshot() -> [NSPasteboardItem] {
-        let pb = NSPasteboard.general
+    static func snapshot(from pb: NSPasteboard = .general) -> [NSPasteboardItem] {
         var items: [NSPasteboardItem] = []
         for item in pb.pasteboardItems ?? [] {
             let copy = NSPasteboardItem()
@@ -24,8 +23,7 @@ enum PasteboardHelper {
         return items
     }
 
-    static func restore(_ items: [NSPasteboardItem]) {
-        let pb = NSPasteboard.general
+    static func restore(_ items: [NSPasteboardItem], to pb: NSPasteboard = .general) {
         pb.clearContents()
         if !items.isEmpty {
             pb.writeObjects(items)

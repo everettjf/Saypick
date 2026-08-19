@@ -45,6 +45,21 @@ enum Language: String, CaseIterable, Identifiable {
         displayName.components(separatedBy: " (").first ?? displayName
     }
 
+    var promptName: String {
+        switch self {
+        case .english: return "English"
+        case .chinese: return "Chinese"
+        case .hindi: return "Hindi"
+        case .spanish: return "Spanish"
+        case .french: return "French"
+        case .arabic: return "Arabic"
+        case .bengali: return "Bengali"
+        case .russian: return "Russian"
+        case .portuguese: return "Portuguese"
+        case .indonesian: return "Indonesian"
+        }
+    }
+
     /// 翻译提示词模板
     func translationPrompt(for text: String, targetLanguage: Language) -> String {
         return """

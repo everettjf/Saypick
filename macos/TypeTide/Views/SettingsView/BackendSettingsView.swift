@@ -10,12 +10,18 @@ import SwiftUI
 struct BackendSettingsView: View {
     @AppStorage(AppSettings.Keys.backend) private var backendRaw = TranslationBackend.ollama.rawValue
     @AppStorage(AppSettings.Keys.openAIBaseURL) private var openAIBaseURL = "https://api.openai.com/v1"
-    @AppStorage(AppSettings.Keys.openAIKey) private var openAIKey = ""
+    @State private var openAIKey = AppSettings.openAIKey
     @AppStorage(AppSettings.Keys.openAIModel) private var openAIModel = "gpt-4o-mini"
     @AppStorage(AppSettings.Keys.ollamaModel) private var ollamaModel = "qwen2.5:3b"
     @State private var installedModels: [String] = []
     @State private var isLoadingModels = false
     @State private var ollamaError: String?
+    @State private var isTestingBackend = false
+    @State private var healthResult: BackendHealthResult?
+
+    private var modelRecommendation: OllamaModelResolver.ModelRecommendation? {
+        OllamaModelResolver.recommendation(from: installedModels)
+    }
 
     var body: some View {
         Form {
@@ -37,6 +43,7 @@ struct BackendSettingsView: View {
                         .textFieldStyle(.roundedBorder)
                     SecureField("API Key", text: $openAIKey)
                         .textFieldStyle(.roundedBorder)
+                        .onChange(of: openAIKey) { _, value in AppSettings.openAIKey = value }
                     TextField("Model", text: $openAIModel)
                         .textFieldStyle(.roundedBorder)
                     SettingsNote(text: "Works with any OpenAI-compatible /chat/completions endpoint (official API, proxies, local servers).")
@@ -72,10 +79,18 @@ struct BackendSettingsView: View {
                     } else {
                         Picker("Translation model", selection: $ollamaModel) {
                             ForEach(installedModels, id: \.self) { model in
-                                Text(model).tag(model)
+                                Text(model == modelRecommendation?.model ? "\(model) · Recommended" : model)
+                                    .tag(model)
                             }
                         }
                         .pickerStyle(.menu)
+                        if let recommendation = modelRecommendation {
+                            SettingsNote(
+                                text: "Recommended for this Mac: \(recommendation.model) (comfortable target up to about \(formatBillions(recommendation.maximumParameterBillions))B parameters).",
+                                symbol: "memorychip.fill",
+                                tint: .blue
+                            )
+                        }
                     }
 
                     HStack {
@@ -99,13 +114,62 @@ struct BackendSettingsView: View {
                                           title: "Ollama", subtitle: "Local and private")
                 }
             }
+
+            Section {
+                HStack {
+                    Button {
+                        Task { await testBackend() }
+                    } label: {
+                        if isTestingBackend {
+                            Label("Testing…", systemImage: "hourglass")
+                        } else {
+                            Label("Test Connection", systemImage: "stethoscope")
+                        }
+                    }
+                    .disabled(isTestingBackend)
+                    Spacer()
+                    if let result = healthResult {
+                        Label(result.isSuccess ? "Ready" : "Needs attention",
+                              systemImage: result.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(result.isSuccess ? .green : .orange)
+                    }
+                }
+                if let result = healthResult {
+                    SettingsNote(
+                        text: healthDescription(result),
+                        symbol: result.isSuccess ? "bolt.fill" : "wrench.and.screwdriver.fill",
+                        tint: result.isSuccess ? .green : .orange
+                    )
+                }
+            } header: {
+                SettingsSectionHeader(symbol: "stethoscope", color: .blue,
+                                      title: "Connection Test", subtitle: "Uses fixed synthetic text, never your clipboard")
+            }
         }
         .settingsPage("Backend")
         .task(id: backendRaw) {
+            healthResult = nil
             if backendRaw == TranslationBackend.ollama.rawValue {
                 await refreshModels()
             }
         }
+    }
+
+    @MainActor
+    private func testBackend() async {
+        isTestingBackend = true
+        defer { isTestingBackend = false }
+        healthResult = await BackendHealthChecker.check()
+    }
+
+    private func healthDescription(_ result: BackendHealthResult) -> String {
+        guard result.isSuccess else { return result.message }
+        let first = result.firstTokenMilliseconds.map { "first token \($0) ms, " } ?? ""
+        return "\(result.message) \(first)total \(result.totalMilliseconds) ms."
+    }
+
+    private func formatBillions(_ value: Double) -> String {
+        String(Int(value))
     }
 
     @MainActor

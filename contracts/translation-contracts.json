@@ -1,0 +1,51 @@
+{
+  "languageDetection": [
+    {"text": "今天天气很好，我们出去散步吧。", "expected": "zh"},
+    {"text": "The quick brown fox jumps over the lazy dog and it was great.", "expected": "en"},
+    {"text": "Это очень интересная книга о русской истории.", "expected": "ru"},
+    {"text": "مرحبا كيف حالك اليوم؟", "expected": "ar"},
+    {"text": "आप कैसे हैं? मुझे हिंदी बहुत पसंद है।", "expected": "hi"}
+  ],
+  "directionCases": [
+    {"text": "你好，今天怎么样？", "mode": "auto", "isWrite": false, "native": "zh", "foreign": "en", "source": "zh", "target": "en"},
+    {"text": "How are you today? This is a complete English sentence.", "mode": "auto", "isWrite": false, "native": "zh", "foreign": "en", "source": "en", "target": "zh"},
+    {"text": "12345 !!!", "mode": "auto", "isWrite": false, "native": "zh", "foreign": "en", "source": null, "target": "zh"},
+    {"text": "12345 !!!", "mode": "auto", "isWrite": true, "native": "zh", "foreign": "en", "source": null, "target": "en"},
+    {"text": "任意文本", "mode": "nativeToForeign", "isWrite": false, "native": "zh", "foreign": "fr", "source": "zh", "target": "fr"},
+    {"text": "anything", "mode": "foreignToNative", "isWrite": true, "native": "zh", "foreign": "es", "source": "es", "target": "zh"}
+  ],
+  "lineAssembly": {
+    "fragments": ["\ufeffdata: {\"choices\":[{\"del", "ta\":{\"content\":\"你\"}}]}\r\n", "data: {\"choices\":[{\"delta\":{\"content\":\"好\"}}]}\n", "data: [DONE]"],
+    "expectedLines": ["data: {\"choices\":[{\"delta\":{\"content\":\"你\"}}]}", "data: {\"choices\":[{\"delta\":{\"content\":\"好\"}}]}", "data: [DONE]"]
+  },
+  "sseCases": [
+    {"line": "data: {\"choices\":[{\"delta\":{\"content\":\"你好\"}}]}", "content": "你好"},
+    {"line": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"}}]}", "content": null},
+    {"line": "data: [DONE]", "content": null},
+    {"line": "event: ping", "content": null},
+    {"line": "data: malformed", "content": null}
+  ],
+  "promptCases": [
+    {
+      "source": "zh",
+      "target": "en",
+      "style": "faithful",
+      "required": ["from Chinese into English", "Output ONLY the translation", "Preserve the original meaning and formatting."],
+      "forbidden": ["professional, formal tone"]
+    },
+    {
+      "source": "en",
+      "target": "fr",
+      "style": "formal",
+      "required": ["from English into French", "professional, formal tone"],
+      "forbidden": []
+    },
+    {
+      "source": "en",
+      "target": "es",
+      "style": "polished",
+      "required": ["from English into Spanish", "Improve clarity and flow"],
+      "forbidden": []
+    }
+  ]
+}

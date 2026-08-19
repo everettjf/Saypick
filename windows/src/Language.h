@@ -26,6 +26,11 @@ enum class TranslationDirection {
     ForeignToNative,  // 固定：外语 → 母语
 };
 
+struct ResolvedDirection {
+    std::optional<Language> source;
+    Language target;
+};
+
 /// 改写/翻译风格
 enum class RewriteStyle {
     Faithful,
@@ -59,6 +64,9 @@ std::optional<Language> Detect(const std::wstring& text);
 
 const char* DirectionCode(TranslationDirection d);
 std::optional<TranslationDirection> DirectionFromCode(const std::string& s);
+
+ResolvedDirection ResolveDirection(const std::wstring& text, TranslationDirection mode,
+                                   bool isWrite, Language native, Language foreign);
 
 const char* StyleCode(RewriteStyle s);
 std::optional<RewriteStyle> StyleFromCode(const std::string& s);

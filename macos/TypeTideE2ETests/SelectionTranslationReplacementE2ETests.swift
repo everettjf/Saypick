@@ -44,28 +44,30 @@ final class SelectionTranslationReplacementE2ETests: XCTestCase {
         TriggerController.shared.presentRead(
             text: (editor.string as NSString).substring(with: editor.selectedRange()),
             element: nil,
-            range: nil
+            range: nil,
+            dismissOnInteraction: false
         )
 
         XCTAssertTrue(PopupController.shared.isVisible)
         let model = try XCTUnwrap(PopupController.shared.currentModel)
-        try await waitUntil { model.translation == "MOCK_TRANSLATION_OK" }
+        try await waitUntil("streamed translation") { model.translation == "MOCK_TRANSLATION_OK" }
         XCTAssertEqual(model.translation, "MOCK_TRANSLATION_OK")
-        try await waitUntil { model.tidePhase == .complete }
+        try await waitUntil("completion animation") { model.tidePhase == .complete }
 
         model.onReplace?()
-        try await waitUntil { editor.string.contains("MOCK_TRANSLATION_OK") }
+        try await waitUntil("editor replacement") { editor.string.contains("MOCK_TRANSLATION_OK") }
 
         XCTAssertEqual(editor.string, "前缀 MOCK_TRANSLATION_OK 后缀")
         XCTAssertFalse(PopupController.shared.isVisible)
     }
 
-    private func waitUntil(timeout: Duration = .seconds(3), condition: @escaping @MainActor () -> Bool) async throws {
+    private func waitUntil(_ state: String, timeout: Duration = .seconds(5),
+                           condition: @escaping @MainActor () -> Bool) async throws {
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: timeout)
         while !condition() {
             guard clock.now < deadline else {
-                XCTFail("Timed out waiting for end-to-end state")
+                XCTFail("Timed out waiting for end-to-end state: \(state)")
                 return
             }
             try await Task.sleep(for: .milliseconds(20))

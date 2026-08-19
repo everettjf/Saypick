@@ -14,9 +14,7 @@ final class PopupController {
     private init() {}
 
     private var panel: NSPanel?
-#if DEBUG
     private(set) var currentModel: TranslationPopupModel?
-#endif
     private var clickMonitor: Any?
     private var keyMonitor: Any?
 
@@ -52,20 +50,18 @@ final class PopupController {
         panel.orderFrontRegardless()
 
         self.panel = panel
-#if DEBUG
         currentModel = model
-#endif
         if dismissOnInteraction { installDismissMonitors() }
         return model
     }
 
     func close() {
         removeMonitors()
+        let dismiss = currentModel?.onDismiss
         panel?.orderOut(nil)
         panel = nil
-#if DEBUG
         currentModel = nil
-#endif
+        dismiss?()
     }
 
     var isVisible: Bool { panel != nil }

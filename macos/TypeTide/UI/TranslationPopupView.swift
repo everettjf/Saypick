@@ -35,6 +35,8 @@ final class TranslationPopupModel: ObservableObject {
     var onRetarget: ((Language) -> Void)?
     /// 翻译失败后重试当前请求
     var onRetry: (() -> Void)?
+    /// 弹窗关闭时取消仍在进行的请求
+    var onDismiss: (() -> Void)?
 
     init(original: String, target: Language) {
         self.original = original

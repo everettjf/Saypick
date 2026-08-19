@@ -22,6 +22,10 @@ for selection capture, a tiny built-in JSON parser. No Electron, no runtime.
 | Per-app skip list | ✅ | ✅ (exe name) |
 | Update check | GitHub Releases | same |
 | Settings | SwiftUI window | native tabbed window |
+| Shortcut actions / verification | ✅ | ✅ |
+| First-run backend check | ✅ | ✅ |
+| Local privacy-safe diagnostics | ✅ | ✅ |
+| System light/dark settings UI | ✅ | ✅ |
 | Permissions needed | Accessibility | none |
 
 Settings persist to `%APPDATA%\TypeTide\settings.json`
@@ -33,6 +37,12 @@ any custom OpenAI-compatible `/chat/completions` endpoint. In normal use the API
 key is stored in Windows Credential Manager; it is never written back to
 `settings.json`. Ollama models are preloaded at startup and kept warm for 10
 minutes to avoid cold-start delays.
+
+The shortcut editor supports Ctrl, Shift, Alt, and the Windows key. Each of the
+two shortcuts independently chooses smart/native/foreign direction and popup or
+in-place replacement. Either shortcut can be cleared; keep at least one configured
+for keyboard triggering. The Ollama picker also recommends an installed model size
+from the machine's physical memory; it never downloads or changes models by itself.
 
 ## Build
 
@@ -52,7 +62,8 @@ The tray icon (`assets/app.ico`) is generated from the macOS icon set with
 ## Test
 
 ```powershell
-# unit-style self-tests (JSON, language detection, settings, prompts)
+# unit-style self-tests (JSON, language detection, settings, shared contracts,
+# privacy-safe diagnostics, prompts)
 build\TypeTide.exe --selftest
 
 # + a real streaming translation through the configured backend
@@ -71,6 +82,10 @@ $env:TYPETIDE_DATA_DIR = "$env:TEMP\typetide-e2e"
 scripts\test-e2e.ps1        # WinForms host → clipboard-fallback capture path
 scripts\test-e2e-wpf.ps1    # WPF host → UI Automation TextPattern path
 ```
+
+For the complete release-candidate matrix (hotkey conflicts, first-run checks,
+dark mode, clipboard restoration, cloud/Ollama streaming, and installer smoke
+tests), follow [`TESTING.md`](TESTING.md) on a Windows machine.
 
 ## Architecture
 
@@ -116,7 +131,5 @@ otherwise a 2-second translation silently burns minutes on hidden reasoning.
 - Some apps (many Electron apps, some WinForms controls) don't expose UIA
   TextPattern — capture falls back to an invisible copy and the popup anchors
   at the cursor instead of the selection.
-- The settings window follows the system light theme only (the popup follows
-  dark mode).
 - `RegisterHotKey` fails if another app owns the combo; TypeTide warns once and
   you can pick a different shortcut in Settings → Shortcuts.

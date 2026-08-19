@@ -11,6 +11,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <vector>
 
 struct TranslationRequest {
     std::wstring text;
@@ -20,6 +21,13 @@ struct TranslationRequest {
 };
 
 namespace translator {
+
+struct HealthCheckResult {
+    bool ok = false;
+    std::wstring message;
+    int firstTokenMs = -1;
+    int totalMs = 0;
+};
 
 /// 提示词构造（与 macOS TranslationPrompt 保持一致）
 std::string SystemPrompt(Language target, std::optional<Language> source, RewriteStyle style);
@@ -40,7 +48,15 @@ void CancelAll();
 /// 阻塞式完整翻译（改写直接替换用）。失败返回 nullopt 并填 error。
 std::optional<std::wstring> TranslateFully(const TranslationRequest& req, std::wstring* error);
 
+/// Async backend health check using fixed synthetic text. Invoke on the main thread so
+/// backend settings are snapshotted safely; completion runs on a worker thread.
+void CheckHealthAsync(std::function<void(HealthCheckResult)> completion);
+
 /// 测试钩子：清空缓存
 void ClearCacheForTesting();
+
+/// Pure streaming helpers shared by production parsing and contract self-tests.
+std::optional<std::wstring> ParseOpenAISSELine(const std::string& line);
+std::vector<std::string> AssembleLinesForTesting(const std::vector<std::string>& fragments);
 
 } // namespace translator

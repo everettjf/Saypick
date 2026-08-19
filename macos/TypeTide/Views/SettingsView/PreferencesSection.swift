@@ -12,6 +12,7 @@ enum PreferencesSection: String, CaseIterable, Identifiable {
     case language = "Language"
     case shortcuts = "Shortcuts"
     case skipApps = "Skip Apps"
+    case diagnostics = "Diagnostics"
     case about = "About"
 
     var id: String { rawValue }
@@ -24,6 +25,7 @@ enum PreferencesSection: String, CaseIterable, Identifiable {
         case .language: return "globe"
         case .shortcuts: return "keyboard.fill"
         case .skipApps: return "nosign"
+        case .diagnostics: return "waveform.path.ecg"
         case .about: return "info.circle.fill"
         }
     }
@@ -37,6 +39,7 @@ enum PreferencesSection: String, CaseIterable, Identifiable {
         case .language: return .green
         case .shortcuts: return .pink
         case .skipApps: return .red
+        case .diagnostics: return .purple
         case .about: return .gray
         }
     }

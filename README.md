@@ -53,8 +53,11 @@ Translation runs through a local model (**Ollama**) for full privacy, or any **O
 - **Works in every app** — uses the Accessibility API (macOS) / UI Automation (Windows) to read the selection, with a clipboard-copy fallback for Electron/web apps, so it works even where text APIs don’t. The original clipboard is always restored.
 - **Undo-safe replacement** — replacements are pasted, preserving each app’s native undo stack.
 - **Local or cloud** — pluggable backends: **Ollama** (offline, private) or any **OpenAI-compatible** API (`/chat/completions`, streaming). Switch in Settings.
-- **Model picker** — Settings lists your installed Ollama models; if the configured model isn't installed, TypeTide auto-selects one so it works out of the box. Thinking models (qwen3 family, …) are handled — hidden reasoning is disabled so translations stay instant.
+- **Model picker** — Settings lists your installed Ollama models, recommends a comfortable size from physical memory, and auto-selects an installed model when the configured one is missing. Thinking models (qwen3 family, …) are handled — hidden reasoning is disabled so translations stay instant.
 - **Styles** — Faithful, Formal, Casual, or Polished, independently for read and rewrite.
+- **Shortcut actions** — each of the two global shortcuts can independently use smart direction or a fixed native/foreign target, then show a popup or replace in place.
+- **Built-in checks** — first-run setup verifies permissions, backend translation, and shortcut registration. The backend check uses fixed synthetic text, never the clipboard.
+- **Private diagnostics** — optional operational events stay on the device and can be reviewed, exported, or cleared. They contain timing, outcome, backend, and capture method only—never selected text, translations, clipboard contents, app names, URLs, or credentials.
 - **Menu-bar / tray only** — no Dock or taskbar clutter. Global shortcuts, launch at login, per-app skip list.
 - **Native on both platforms** — SwiftUI on macOS, Win32 C++ on Windows. No Electron, no runtime.
 
@@ -105,7 +108,7 @@ macOS: allow TypeTide under **System Settings → Privacy & Security → Accessi
 - Select text → **⌥D** (macOS) / **Alt+D** (Windows) → see the translation.
 - Type in your language → **⌥R** / **Alt+R** → it’s rewritten in place.
 
-Shortcuts, triggers, styles, and languages are all configurable in **Settings**.
+Shortcuts, their actions, triggers, styles, and languages are all configurable in **Settings**. Either shortcut can be cleared completely; keep at least one configured if you want keyboard triggering. Windows combinations may also include the Windows key. Use **Test Connection** and **Verify Shortcuts** to confirm the complete path before relying on it.
 
 ## ⌨️ Default shortcuts
 
@@ -113,6 +116,8 @@ Shortcuts, triggers, styles, and languages are all configurable in **Settings**.
 |---|---|---|
 | Translate selection (read) | <kbd>⌥</kbd><kbd>D</kbd> | <kbd>Alt</kbd><kbd>D</kbd> |
 | Rewrite & replace (write) | <kbd>⌥</kbd><kbd>R</kbd> | <kbd>Alt</kbd><kbd>R</kbd> |
+
+These are defaults, not requirements. Clear either shortcut in **Settings → Shortcuts**; if both are cleared, TypeTide warns that keyboard triggering is unavailable.
 
 ## 🧠 How it works
 
