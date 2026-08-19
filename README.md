@@ -1,5 +1,5 @@
 <h1 align="center">TypeTide</h1>
-<p align="center"><b>Type in your language. Read and rewrite in any app on macOS &amp; Windows.</b></p>
+<p align="center"><b>Type in your language. Rewrite in place — in any app on macOS &amp; Windows.</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-26+-black.svg" />
@@ -97,9 +97,9 @@ macOS — with [Homebrew](https://brew.sh) (recommended):
 ```bash
 brew install --cask everettjf/typetide/typetide
 ```
-…or download the latest `.dmg` from [Releases](../../releases), drag it to Applications, and launch it. The build is signed and notarized by Apple.
+…or download the latest `.dmg` from [Releases](https://github.com/everettjf/typetide/releases/latest), drag it to Applications, and launch it. The build is signed and notarized by Apple.
 
-Windows — download and run the latest `TypeTide-Setup-x.y.z.exe` installer from [Releases](../../releases) (per-user, no admin needed; a portable `TypeTide-Windows-x.y.z.zip` is also available). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
+Windows — download and run the latest `TypeTide-Setup-x.y.z.exe` installer from [Releases](https://github.com/everettjf/typetide/releases/latest) (per-user, no admin needed; a portable `TypeTide-Windows-x.y.z.zip` is also available). If SmartScreen warns about an unrecognized app, choose **More info → Run anyway**.
 
 **3. First run**
 
@@ -207,7 +207,7 @@ Whichever platform releases first creates the `vX.Y.Z` tag; the other uploads it
 
 ## 🤝 Contributing
 
-Issues and PRs welcome. Join the [Discord](https://discord.com/invite/eGzEaP6TzR).
+Issues and PRs welcome. The maintained README languages are English and Simplified Chinese; translations into other languages are welcome when contributors can help keep them current. Join the [Discord](https://discord.com/invite/eGzEaP6TzR).
 
 ## 📄 License
 

@@ -1,5 +1,5 @@
 <h1 align="center">TypeTide</h1>
-<p align="center"><b>用你的语言输入，在 macOS 和 Windows 的任何应用里读懂与改写。</b></p>
+<p align="center"><b>用你的语言输入，在 macOS 和 Windows 的任何应用里原地改写。</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-26+-black.svg" />
@@ -90,9 +90,9 @@ macOS——推荐用 [Homebrew](https://brew.sh)：
 ```bash
 brew install --cask everettjf/typetide/typetide
 ```
-……或者从 [Releases](../../releases) 下载最新 `.dmg`，拖进「应用程序」后启动。安装包已由 Apple 签名和公证。
+……或者从 [Releases](https://github.com/everettjf/typetide/releases/latest) 下载最新 `.dmg`，拖进「应用程序」后启动。安装包已由 Apple 签名和公证。
 
-Windows——从 [Releases](../../releases) 下载最新的 `TypeTide-Setup-x.y.z.exe` 安装包运行即可（按用户安装，无需管理员权限；也提供便携版 `TypeTide-Windows-x.y.z.zip`）。如果 SmartScreen 提示无法识别的应用，点**更多信息 → 仍要运行**。
+Windows——从 [Releases](https://github.com/everettjf/typetide/releases/latest) 下载最新的 `TypeTide-Setup-x.y.z.exe` 安装包运行即可（按用户安装，无需管理员权限；也提供便携版 `TypeTide-Windows-x.y.z.zip`）。如果 SmartScreen 提示无法识别的应用，点**更多信息 → 仍要运行**。
 
 **3. 首次运行**
 
@@ -200,7 +200,7 @@ cmake --build build             # → build/TypeTide.exe
 
 ## 🤝 参与贡献
 
-欢迎提 Issue 和 PR。来 [Discord](https://discord.com/invite/eGzEaP6TzR) 聊聊。
+欢迎提 Issue 和 PR。目前持续维护英文和简体中文 README；如果贡献者愿意一起保持内容同步，也欢迎增加其他语言翻译。来 [Discord](https://discord.com/invite/eGzEaP6TzR) 聊聊。
 
 ## 📄 许可证
 
