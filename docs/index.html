@@ -63,15 +63,12 @@
      letter-spacing:-.025em;margin:22px 0 0;max-width:14ch}
   h1 em{font-style:italic;font-weight:500}
   .roll{display:inline-block;height:1.02em;overflow:hidden;vertical-align:bottom;position:relative}
-  .roll-list{display:flex;flex-direction:column;animation:roll 14s infinite;color:var(--red)}
+  .roll-list{display:flex;flex-direction:column;animation:roll 22s steps(10,end) infinite;color:var(--red)}
   .roll-list span{height:1.02em;line-height:1.02em;white-space:nowrap}
+  .roll-list span.long{font-size:.66em;padding-top:.22em}
   @keyframes roll{
-    0%,14%{transform:translateY(0)}
-    18%,31%{transform:translateY(-1.02em)}
-    35%,48%{transform:translateY(-2.04em)}
-    52%,65%{transform:translateY(-3.06em)}
-    69%,82%{transform:translateY(-4.08em)}
-    86%,100%{transform:translateY(-5.10em)}
+    from{transform:translateY(0)}
+    to{transform:translateY(-10.20em)}
   }
   .underx{display:block;width:min(440px,70%);height:13px;margin-top:-2px;color:var(--red)}
   .sub{max-width:38ch;margin:30px 0 0;font-size:clamp(17px,2.1vw,21px);color:var(--ink-2);line-height:1.55}
@@ -136,6 +133,12 @@
   .row p{color:var(--muted);margin-top:5px;max-width:62ch;font-size:15.5px}
   .row code{font-family:var(--mono);font-size:13px;background:var(--paper-2);padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
 
+  /* languages */
+  .language-grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:40px}
+  .language-pill{background:var(--card);border:1px solid var(--line-2);border-radius:999px;
+                 padding:10px 16px;font-family:var(--display);font-size:17px;box-shadow:3px 3px 0 rgba(28,24,20,.06)}
+  .language-pill small{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:7px;text-transform:uppercase}
+
   /* backends */
   .be-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:46px}
   .be{background:var(--card);border:1px solid var(--line-2);border-radius:16px;padding:30px;box-shadow:6px 6px 0 rgba(28,24,20,.06)}
@@ -188,6 +191,7 @@
   <div class="nav-links">
     <a href="#use">How it works</a>
     <a href="#features">Features</a>
+    <a href="#languages">Languages</a>
     <a href="#backends">Backends</a>
     <a href="https://github.com/everettjf/typetide/blob/main/docs/blog/introducing-typetide.md">Blog</a>
     <a class="ghbtn" href="https://github.com/everettjf/typetide">GitHub ↗</a>
@@ -199,7 +203,7 @@
     <span class="kicker"><span class="tick"></span> macOS + Windows · native · open source</span>
     <h1>Type in
       <span class="roll"><span class="roll-list">
-        <span>English.</span><span>中文.</span><span>Español.</span><span>Français.</span><span>العربية.</span><span>English.</span>
+        <span>English.</span><span>中文.</span><span>हिन्दी.</span><span>Español.</span><span>Français.</span><span>العربية.</span><span>বাংলা.</span><span>Русский.</span><span>Português.</span><span class="long">Bahasa Indonesia.</span><span>English.</span>
       </span></span>
       <svg class="underx" viewBox="0 0 440 13" fill="none" preserveAspectRatio="none"><path d="M3 8C84 3 210 2 437 6" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
       <em>Rewrite</em> in place.
@@ -269,6 +273,27 @@
       <div class="row reveal"><div class="ix">04</div><div><h4>Shortcuts that fit your workflow</h4><p>Set smart or fixed language direction independently for Read and Write. Change either shortcut, clear one completely, or trigger Read from the floating icon and automatic selection mode.</p></div></div>
       <div class="row reveal"><div class="ix">05</div><div><h4>Four tones</h4><p><b>Faithful</b>, <b>Formal</b>, <b>Casual</b>, or <b>Polished</b> — chosen independently for reading and rewriting, across the ten most-spoken languages.</p></div></div>
       <div class="row reveal"><div class="ix">06</div><div><h4>Native on both platforms</h4><p>A SwiftUI menu-bar app on macOS and a Win32 tray app on Windows. No Electron runtime, with launch at login and a per-app skip list.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section id="languages">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="sec-no">§ LANGUAGES</span><h2>Think in yours.<br>Type in another.</h2></div>
+    <p class="sec-lead reveal">Detection and translation use the same ten-language set on macOS and Windows.</p>
+    <div class="language-grid reveal">
+      <span class="language-pill">English <small>EN</small></span>
+      <span class="language-pill">中文 <small>ZH</small></span>
+      <span class="language-pill">हिन्दी <small>HI</small></span>
+      <span class="language-pill">Español <small>ES</small></span>
+      <span class="language-pill">Français <small>FR</small></span>
+      <span class="language-pill">العربية <small>AR</small></span>
+      <span class="language-pill">বাংলা <small>BN</small></span>
+      <span class="language-pill">Русский <small>RU</small></span>
+      <span class="language-pill">Português <small>PT</small></span>
+      <span class="language-pill">Bahasa Indonesia <small>ID</small></span>
     </div>
   </div>
 </section>

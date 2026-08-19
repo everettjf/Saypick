@@ -73,7 +73,9 @@ No browser tab and no copy-paste loop. Translation runs through a local model (*
 
 ## 🌍 Languages
 
-Detection and translation cover the 10 most-spoken languages: **English, Chinese, Hindi, Spanish, French, Arabic, Bengali, Russian, Portuguese, Indonesian.** Pick your native and foreign language in **Settings → Language**. Each Read/Write shortcut (`⌥D / ⌥R` on macOS, `Alt+D / Alt+R` on Windows) has its own direction: **auto** detects the selected text's language and translates the other way, or pin a **fixed** direction for mixed-language text.
+Detection and translation use the same 10-language set on macOS and Windows: **English (`en`), 中文 (`zh`), हिन्दी (`hi`), Español (`es`), Français (`fr`), العربية (`ar`), বাংলা (`bn`), Русский (`ru`), Português (`pt`), and Bahasa Indonesia (`id`)**.
+
+Pick your native and foreign language in **Settings → Language**. Each Read/Write shortcut (`⌥D / ⌥R` on macOS, `Alt+D / Alt+R` on Windows) has its own direction: **auto** detects the selected text's language and translates the other way, or pin a **fixed** direction for mixed-language text.
 
 ## 🚀 Quick start
 
