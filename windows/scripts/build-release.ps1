@@ -17,9 +17,20 @@ $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.
 if (-not $vs) { throw "Visual Studio with C++ workload not found" }
 $devcmd = Join-Path $vs "Common7\Tools\VsDevCmd.bat"
 
+$innoRegistryKeys = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1",
+    "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1"
+)
+$registeredIscc = $innoRegistryKeys | ForEach-Object {
+    if (Test-Path $_) {
+        $installLocation = (Get-ItemProperty $_ -Name InstallLocation -ErrorAction SilentlyContinue).InstallLocation
+        if ($installLocation) { Join-Path $installLocation "ISCC.exe" }
+    }
+}
 $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
           "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
-          "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe") |
+          "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe") + $registeredIscc |
         Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) { throw "Inno Setup 6 not found (winget install JRSoftware.InnoSetup)" }
 
