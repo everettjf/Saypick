@@ -121,7 +121,7 @@ actor LocalDiagnostics {
     }
 }
 
-private struct DiagnosticReport: Codable {
+private nonisolated struct DiagnosticReport: Codable {
     let generatedAt: Date
     let privacyNotice: String
     let events: [DiagnosticEvent]
