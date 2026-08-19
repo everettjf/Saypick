@@ -1,5 +1,5 @@
 <h1 align="center">TypeTide</h1>
-<p align="center"><b>macOS 和 Windows 上的全局 AI 翻译与原地改写</b></p>
+<p align="center"><b>用你的语言输入，在 macOS 和 Windows 的任何应用里读懂与改写。</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-26+-black.svg" />
@@ -13,16 +13,16 @@
 
 <p align="center">
   <a href="https://xnu.app/TypeTide/">🌐 官网</a> ·
-  <a href="docs/blog/introducing-typetide.md">📝 项目介绍</a> ·
+  <a href="docs/blog/typetide-project-introduction.zh.md">📝 项目介绍</a> ·
   <a href="README.md">English</a> · <b>简体中文</b>
 </p>
 
-TypeTide 常驻菜单栏（macOS）或系统托盘（Windows），在**任何**应用里都能用。两件事，各一个快捷键：
+TypeTide 把翻译变成一个原地完成的系统动作。它常驻菜单栏（macOS）或系统托盘（Windows），在**任何**应用里都能用：
 
 - **读** — 选中外语文字，按下快捷键，译文就在旁边弹出。
-- **写** — 用母语打字，按下快捷键，文字**原地改写**成目标语言，直接可以发送。
+- **写** — **用母语输入**，按下快捷键，文字原地改写成目标语言，直接可以发送。
 
-翻译走本地模型（**Ollama**，完全私密）或任意 **OpenAI 兼容**接口（更快）。不用开浏览器标签页，不用复制粘贴到翻译网站——选中的文字待在原处；用 Ollama 时，内容永远不离开你的电脑。
+不用打开浏览器标签页，也不用在翻译网站之间来回复制粘贴。翻译可以使用本地模型 **Ollama**（隐私、离线），也可以使用你选择的云端接口（更快）。
 
 <p align="center">
   <img src="docs/screenshots/rewrite.gif" alt="输入中文，按 ⌥R，原地改写为英文" width="760" />

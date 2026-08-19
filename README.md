@@ -1,5 +1,5 @@
 <h1 align="center">TypeTide</h1>
-<p align="center"><b>System-wide AI translation &amp; inline rewrite for macOS &amp; Windows</b></p>
+<p align="center"><b>Type in your language. Read and rewrite in any app on macOS &amp; Windows.</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-26+-black.svg" />
@@ -17,12 +17,12 @@
   <b>English</b> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-TypeTide lives in your menu bar (macOS) or system tray (Windows) and works in **any** app. Two things, one shortcut each:
+TypeTide turns translation into an in-place system action. It lives in your menu bar (macOS) or system tray (Windows) and works in **any** app:
 
 - **Read** — select foreign text, hit a shortcut, and a translation pops up next to it.
-- **Write** — type in your own language, hit a shortcut, and it’s **rewritten in place** into the target language, ready to send.
+- **Write** — **type in your own language**, hit a shortcut, and it’s rewritten in place into the target language, ready to send.
 
-Translation runs through a local model (**Ollama**) for full privacy, or any **OpenAI-compatible** endpoint for speed. No browser tab, no copy-paste into a translation site — your selection stays where it is, and (with Ollama) never leaves your machine.
+No browser tab and no copy-paste loop. Translation runs through a local model (**Ollama**) for privacy and offline use, or a cloud endpoint you choose for speed.
 
 <p align="center">
   <img src="docs/screenshots/tide-transition.gif" alt="TypeTide's particle tide sweeps across selected text while the translation streams in" width="760" />

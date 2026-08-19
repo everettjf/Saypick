@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TypeTide — System-wide AI translation &amp; inline rewrite for macOS</title>
-<meta name="description" content="TypeTide lives in your macOS menu bar. Select text to translate, or type in your language and rewrite it in place — powered by local Ollama or any OpenAI-compatible model." />
+<title>TypeTide — System-wide AI translation &amp; inline rewrite</title>
+<meta name="description" content="Type in your language. Read and rewrite in any app on macOS and Windows, powered by local Ollama or your own cloud AI endpoint." />
 <link rel="canonical" href="https://xnu.app/TypeTide/" />
-<meta property="og:title" content="TypeTide — AI translation &amp; inline rewrite for macOS" />
+<meta property="og:title" content="TypeTide — Type in your language. Read and rewrite anywhere." />
 <meta property="og:url" content="https://xnu.app/TypeTide/" />
-<meta property="og:description" content="Select to translate. Type to rewrite in place. Local or cloud AI. Works in any app." />
+<meta property="og:description" content="System-wide AI translation and inline rewrite for macOS and Windows. Local or cloud, native on both platforms." />
 <meta property="og:type" content="website" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23d23a1d'/><text x='50' y='72' font-size='62' font-family='Georgia,serif' fill='%23f5f0e6' text-anchor='middle'>T</text></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -196,30 +196,31 @@
 
 <div class="wrap" id="top">
   <header class="hero">
-    <span class="kicker"><span class="tick"></span> macOS menu-bar app · open source</span>
-    <h1>Say it in
+    <span class="kicker"><span class="tick"></span> macOS + Windows · native · open source</span>
+    <h1>Type in
       <span class="roll"><span class="roll-list">
         <span>English.</span><span>中文.</span><span>Español.</span><span>Français.</span><span>日本語.</span><span>English.</span>
       </span></span>
       <svg class="underx" viewBox="0 0 440 13" fill="none" preserveAspectRatio="none"><path d="M3 8C84 3 210 2 437 6" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-      <em>Read</em> any language. <em>Rewrite</em> your own.
+      <em>Read</em> anywhere. <em>Rewrite</em> in place.
     </h1>
-    <p class="sub">TypeTide lives in your menu bar. <b>Select</b> foreign text to translate it in a popup, or <b>type</b> in your language and have it <b>rewritten in place</b> — in any app, one shortcut each.</p>
+    <p class="sub">TypeTide lives in your menu bar or system tray. <b>Select</b> foreign text to translate it beside the selection, or <b>type</b> in your language and have it <b>rewritten in place</b> — in any app.</p>
 
     <div class="actions">
       <div class="cmd" id="brew">
         <span><span class="pr">$</span> brew install --cask everettjf/typetide/typetide</span>
         <button onclick="copyBrew()" id="copybtn">Copy</button>
       </div>
-      <a class="btn solid" href="https://github.com/everettjf/typetide/releases">Download .dmg</a>
+      <a class="btn solid" href="https://github.com/everettjf/typetide/releases/latest">Download for macOS</a>
+      <a class="btn line" href="https://github.com/everettjf/typetide/releases/latest">Download for Windows</a>
     </div>
-    <p class="meta"><b>macOS 26+</b> · Apple Silicon &amp; Intel · signed &amp; notarized · <b>MIT</b></p>
+    <p class="meta"><b>macOS 26+</b> · <b>Windows 10+</b> · Apple Silicon, Intel &amp; x64 · native · <b>MIT</b></p>
   </header>
 
   <div class="hero-fig plate reveal">
-    <span class="figtag">FIG. 01 — REWRITE · ⌥R</span>
+    <span class="figtag">FIG. 01 — REWRITE · ⌥R / ALT+R</span>
     <img src="screenshots/rewrite.gif" alt="Type Chinese, press the shortcut, and it is rewritten into English in place" loading="lazy" />
-    <p class="figcap">Type in your language → ⌥R → rewritten in place, ready to send.</p>
+    <p class="figcap">Type in your language → press the shortcut → rewritten in place, ready to send.</p>
   </div>
 </div>
 
@@ -228,14 +229,14 @@
 <section id="use">
   <div class="wrap">
     <div class="sec-head reveal"><span class="sec-no">§ TWO MODES</span><h2>Read it, or write it.</h2></div>
-    <p class="sec-lead reveal">One shortcut to understand what's in front of you. One to say what you mean — in another language, without leaving the field.</p>
+    <p class="sec-lead reveal">One shortcut to understand what's in front of you. One to type what you mean and rewrite it in another language — without leaving the field.</p>
 
     <div class="modes">
       <div class="mode reveal">
         <div class="big">01</div>
         <h3>Read · translate</h3>
         <p>Select foreign text in any app and a clean popup shows the translation right beside it — streaming, with one-click Copy or Replace. Trigger by shortcut, a floating icon, or auto on select.</p>
-        <div class="key"><kbd>⌥</kbd><kbd>D</kbd></div>
+        <div class="key"><kbd>⌥ D</kbd><kbd>Alt + D</kbd></div>
         <div class="plate">
           <span class="figtag">FIG. 02 — READ</span>
           <img src="screenshots/translate.gif" alt="Translation streams into a popup over selected text" loading="lazy" />
@@ -245,7 +246,7 @@
         <div class="big">02</div>
         <h3>Write · rewrite in place</h3>
         <p>Think in your language, send in another. Type, hit the shortcut, and your text is replaced in place with the translation — undo-safe, so a single ⌘Z brings the original back.</p>
-        <div class="key"><kbd>⌥</kbd><kbd>R</kbd></div>
+        <div class="key"><kbd>⌥ R</kbd><kbd>Alt + R</kbd></div>
         <div class="plate">
           <span class="figtag">FIG. 03 — ICON</span>
           <img src="screenshots/icon.png" alt="Floating translate icon next to a selection" loading="lazy" />
@@ -262,12 +263,12 @@
     <div class="sec-head reveal"><span class="sec-no">§ THE FINE PRINT</span><h2>Everything you'd want.<br>Nothing you don't.</h2></div>
 
     <div class="spec">
-      <div class="row reveal"><div class="ix">01</div><div><h4>Works in every app</h4><p>Reads your selection through the macOS Accessibility API, with a synthetic-copy fallback for Electron &amp; web apps — and your clipboard is always restored afterward.</p></div></div>
+      <div class="row reveal"><div class="ix">01</div><div><h4>Works in every app</h4><p>Reads your selection through macOS Accessibility or Windows UI Automation, with a synthetic-copy fallback for Electron &amp; web apps — and your clipboard is always restored afterward.</p></div></div>
       <div class="row reveal"><div class="ix">02</div><div><h4>Privacy you can reason about</h4><p>Ollama keeps triggered selections on your machine. A cloud backend sends them to the endpoint you configure. Accessibility/UI Automation enables system-wide selection access; clipboard fallback briefly copies and then restores your clipboard, which clipboard-history tools may record.</p></div></div>
-      <div class="row reveal"><div class="ix">03</div><div><h4>Undo-safe rewrite</h4><p>Rewrites are pasted in place and preserve each app's native undo stack. Changed your mind? <code>⌘Z</code>, any time.</p></div></div>
-      <div class="row reveal"><div class="ix">04</div><div><h4>Auto or fixed direction</h4><p>Detects the selected language and translates both ways — set independently for ⌥D and ⌥R. Or pin a fixed direction when mixed-language text could trip detection.</p></div></div>
+      <div class="row reveal"><div class="ix">03</div><div><h4>Undo-safe rewrite</h4><p>Rewrites are pasted in place and preserve each app's native undo stack. Changed your mind? Use <code>⌘Z</code> or <code>Ctrl+Z</code>.</p></div></div>
+      <div class="row reveal"><div class="ix">04</div><div><h4>Shortcuts that fit your workflow</h4><p>Set smart or fixed language direction independently for Read and Write. Change either shortcut, clear one completely, or trigger Read from the floating icon and automatic selection mode.</p></div></div>
       <div class="row reveal"><div class="ix">05</div><div><h4>Four tones</h4><p><b>Faithful</b>, <b>Formal</b>, <b>Casual</b>, or <b>Polished</b> — chosen independently for reading and rewriting, across the ten most-spoken languages.</p></div></div>
-      <div class="row reveal"><div class="ix">06</div><div><h4>Menu-bar native</h4><p>No Dock clutter. Global shortcuts, launch at login, and a per-app skip list for the apps where you'd rather it stayed quiet.</p></div></div>
+      <div class="row reveal"><div class="ix">06</div><div><h4>Native on both platforms</h4><p>A SwiftUI menu-bar app on macOS and a Win32 tray app on Windows. No Electron runtime, with launch at login and a per-app skip list.</p></div></div>
     </div>
   </div>
 </section>
@@ -289,7 +290,7 @@
       <div class="be reveal">
         <span class="tag">Bring your own</span>
         <h4>OpenAI-compatible</h4>
-        <p>Point it at any <code style="font-family:var(--mono)">/chat/completions</code> endpoint — the official API, a proxy, or your own server.</p>
+        <p>Use OpenAI, OpenRouter, DeepSeek, or any custom <code style="font-family:var(--mono)">/chat/completions</code> endpoint. Credentials stay in Keychain or Windows Credential Manager.</p>
         <pre>base URL · API key · model</pre>
       </div>
     </div>
@@ -298,14 +299,15 @@
 
 <div class="wrap">
   <div class="band reveal">
-    <h2>Translate in place.</h2>
-    <p>Free, open source, and private. Set up in under two minutes.</p>
+    <h2>Type here. Translate here.</h2>
+    <p>Free, open source, and native on macOS and Windows. Set up in under two minutes.</p>
     <div class="cmd">
       <span><span class="pr">$</span> brew install --cask everettjf/typetide/typetide</span>
       <button onclick="copyBrew()">Copy</button>
     </div>
     <div class="actions">
-      <a class="btn solid" href="https://github.com/everettjf/typetide/releases">Download .dmg</a>
+      <a class="btn solid" href="https://github.com/everettjf/typetide/releases/latest">Download for macOS</a>
+      <a class="btn line" href="https://github.com/everettjf/typetide/releases/latest">Download for Windows</a>
       <a class="btn line" href="https://github.com/everettjf/typetide">★ Star on GitHub</a>
     </div>
   </div>
