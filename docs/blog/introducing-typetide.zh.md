@@ -100,7 +100,7 @@ TypeTide 对后端不挑食，内置两种可插拔的 provider：
 
 我想让翻译感觉像一个 **系统功能**，而不是一个要去的"目的地"。不用开新标签页，不用复制粘贴来回倒腾，而且——当我离线、或处理一些隐私内容时——没有任何数据离开我的笔记本。TypeTide 就是这个：一个安静待在菜单栏里的小助手，把"去翻译一下这个"变成一次按键。
 
-它是 **开源的（MIT）**。如果它每天能帮你省下几次上下文切换，欢迎去 [GitHub](https://github.com/everettjf/typetide) 点个 ⭐️，也欢迎来 [Discord](https://discord.com/invite/eGzEaP6TzR) 聊聊问题和想法。
+它是 **开源的（MIT）**。如果它每天能帮你省下几次上下文切换，欢迎去 [GitHub](https://github.com/everettjf/typetide) 点个 ⭐️，也欢迎来 [Discord](https://discord.gg/eGzEaP6TzR) 聊聊问题和想法。
 
 ---
 

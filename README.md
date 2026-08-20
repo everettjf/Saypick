@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/C++-20-00599c.svg" />
   <img src="https://img.shields.io/badge/AI-Ollama%20%7C%20OpenAI--compatible-7c5cff.svg" />
   <img src="https://img.shields.io/badge/License-MIT-green.svg" />
-  <a href="https://discord.com/invite/eGzEaP6TzR"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" /></a>
+  <a href="https://discord.gg/eGzEaP6TzR"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" /></a>
 </p>
 
 <p align="center">
@@ -209,7 +209,7 @@ Whichever platform releases first creates the `vX.Y.Z` tag; the other uploads it
 
 ## 🤝 Contributing
 
-Issues and PRs welcome. The maintained README languages are English and Simplified Chinese; translations into other languages are welcome when contributors can help keep them current. Join the [Discord](https://discord.com/invite/eGzEaP6TzR).
+Issues and PRs welcome. The maintained README languages are English and Simplified Chinese; translations into other languages are welcome when contributors can help keep them current. Join the [Discord](https://discord.gg/eGzEaP6TzR).
 
 ## 📄 License
 

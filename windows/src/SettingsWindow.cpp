@@ -583,7 +583,7 @@ void buildPages() {
         make(L"SysLink",
              L"<a href=\"https://github.com/everettjf/typetide\">GitHub</a>   ·   "
              L"<a href=\"https://xnu.app/TypeTide/\">Website</a>   ·   "
-             L"<a href=\"https://discord.com/invite/eGzEaP6TzR\">Discord</a>",
+             L"<a href=\"https://discord.gg/eGzEaP6TzR\">Discord</a>",
              WS_TABSTOP, x, y + 84, w, 22, kAboutLinks),
     };
     g.pages[7].insert(g.pages[7].end(), controls.begin(), controls.end());

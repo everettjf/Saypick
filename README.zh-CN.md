@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/C++-20-00599c.svg" />
   <img src="https://img.shields.io/badge/AI-Ollama%20%7C%20OpenAI--compatible-7c5cff.svg" />
   <img src="https://img.shields.io/badge/License-MIT-green.svg" />
-  <a href="https://discord.com/invite/eGzEaP6TzR"><img src="https://img.shields.io/badge/Discord-加入-5865F2?logo=discord&logoColor=white" /></a>
+  <a href="https://discord.gg/eGzEaP6TzR"><img src="https://img.shields.io/badge/Discord-加入-5865F2?logo=discord&logoColor=white" /></a>
 </p>
 
 <p align="center">
@@ -202,7 +202,7 @@ cmake --build build             # → build/TypeTide.exe
 
 ## 🤝 参与贡献
 
-欢迎提 Issue 和 PR。目前持续维护英文和简体中文 README；如果贡献者愿意一起保持内容同步，也欢迎增加其他语言翻译。来 [Discord](https://discord.com/invite/eGzEaP6TzR) 聊聊。
+欢迎提 Issue 和 PR。目前持续维护英文和简体中文 README；如果贡献者愿意一起保持内容同步，也欢迎增加其他语言翻译。来 [Discord](https://discord.gg/eGzEaP6TzR) 聊聊。
 
 ## 📄 许可证
 

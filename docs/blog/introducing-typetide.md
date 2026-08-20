@@ -78,7 +78,7 @@ Everything — shortcuts, triggers, styles, languages — is configurable in Set
 
 I wanted translation to feel like a system feature, not a destination. No tab to open, no paste dance, and — when I'm offline or handling something private — no data leaving my laptop. TypeTide is that: a quiet menu-bar helper that turns "go translate this" into a single keystroke.
 
-It's **open source (MIT)**. If it saves you a few context switches a day, a ⭐️ on [GitHub](https://github.com/everettjf/typetide) is appreciated, and the [Discord](https://discord.com/invite/eGzEaP6TzR) is open for questions and ideas.
+It's **open source (MIT)**. If it saves you a few context switches a day, a ⭐️ on [GitHub](https://github.com/everettjf/typetide) is appreciated, and the [Discord](https://discord.gg/eGzEaP6TzR) is open for questions and ideas.
 
 ---
 
