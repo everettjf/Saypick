@@ -212,7 +212,7 @@
 
     <div class="actions">
       <div class="cmd" id="brew">
-        <span><b>macOS</b> · <span class="pr">$</span> brew install --cask everettjf/typetide/typetide</span>
+        <span><b>macOS</b> · <span class="pr">$</span> brew install --cask everettjf/tap/typetide</span>
         <button onclick="copyBrew()" id="copybtn">Copy</button>
       </div>
       <a class="btn solid" href="https://github.com/everettjf/typetide/releases/latest">Download for macOS</a>
@@ -347,7 +347,7 @@
 
 <script>
   function copyBrew(){
-    navigator.clipboard.writeText("brew install --cask everettjf/typetide/typetide");
+    navigator.clipboard.writeText("brew install --cask everettjf/tap/typetide");
     document.querySelectorAll('.cmd button').forEach(b=>{const t=b.textContent;b.textContent="Copied ✓";setTimeout(()=>b.textContent=t,1400)});
   }
   const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});

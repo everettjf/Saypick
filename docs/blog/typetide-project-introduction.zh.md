@@ -141,7 +141,7 @@ macOS 和 Windows 使用完全相同的十种检测与翻译语言：
 ## 三步开始使用
 
 1. **选择后端。** 隐私与离线优先时安装 [Ollama](https://ollama.com/download)，例如运行 `ollama pull qwen2.5:3b`；也可以填写自己的云端兼容接口。
-2. **安装应用。** 从 [GitHub Releases](https://github.com/everettjf/typetide/releases/latest) 下载 macOS DMG、Windows 安装版 EXE 或便携版 ZIP。macOS 用户也可运行 `brew install --cask everettjf/typetide/typetide`。
+2. **安装应用。** 从 [GitHub Releases](https://github.com/everettjf/typetide/releases/latest) 下载 macOS DMG、Windows 安装版 EXE 或便携版 ZIP。macOS 用户也可运行 `brew install --cask everettjf/tap/typetide`。
 3. **完成首次检查。** macOS 授予辅助功能权限，Windows 无需额外系统权限；然后在设置中测试后端并验证已配置的快捷键。选中文字按“读”，输入文字按“写”。
 
 目前系统要求为 macOS 26+ 或 Windows 10+。macOS 安装包经过 Developer ID 签名与 Apple 公证；Windows 提供无需管理员权限的按用户安装包和便携版。

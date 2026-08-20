@@ -90,7 +90,7 @@ TypeTide 会在**设置 → Backend** 里列出你已安装的模型；配置的
 
 macOS——推荐用 [Homebrew](https://brew.sh)：
 ```bash
-brew install --cask everettjf/typetide/typetide
+brew install --cask everettjf/tap/typetide
 ```
 ……或者从 [Releases](https://github.com/everettjf/typetide/releases/latest) 下载最新 `.dmg`，拖进「应用程序」后启动。安装包已由 Apple 签名和公证。
 
