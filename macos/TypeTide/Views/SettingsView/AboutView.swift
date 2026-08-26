@@ -22,32 +22,32 @@ struct AboutView: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: TypeTideTheme.Spacing.large) {
             Spacer()
 
             // App Icon
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 112, height: 112)
+                .frame(width: 88, height: 88)
 
             // App Name and Version
             VStack(spacing: 8) {
                 Text("TypeTide")
-                    .font(.largeTitle.weight(.bold))
+                    .font(.title.weight(.bold))
 
                 Text(appVersion)
-                    .font(.title3)
-                    .foregroundColor(.secondary)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
 
                 // 新版本提示
                 if updateChecker.hasNewVersion, let release = updateChecker.latestRelease {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.up.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundStyle(TypeTideTheme.success)
                         Text("New version \(release.tagName) available")
                             .font(.callout)
-                            .foregroundColor(.green)
+                            .foregroundStyle(TypeTideTheme.success)
                     }
                     .padding(.top, 4)
                 }
@@ -57,11 +57,11 @@ struct AboutView: View {
             VStack(spacing: 12) {
                 Text("Intelligent Translation Assistant")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Text("Select text to translate, or rewrite your own writing in place — in any app, powered by AI models")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 40)
@@ -112,6 +112,7 @@ struct AboutView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .tint(TypeTideTheme.accent)
         .navigationTitle("About")
         .alert("Update Check", isPresented: $showUpdateAlert, presenting: updateChecker) { checker in
             if checker.hasNewVersion {

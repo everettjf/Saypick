@@ -5,6 +5,7 @@ struct DiagnosticsSettingsView: View {
     @State private var events: [DiagnosticEvent] = []
     @State private var exportDocument = DiagnosticsDocument(data: Data())
     @State private var isExporting = false
+    private let metricColumns = [GridItem(.adaptive(minimum: 132), spacing: TypeTideTheme.Spacing.medium)]
 
     private var translations: [DiagnosticEvent] { events.filter { $0.name == .translation } }
     private var captureSuccesses: Int {
@@ -22,7 +23,7 @@ struct DiagnosticsSettingsView: View {
     var body: some View {
         Form {
             Section {
-                HStack(spacing: 12) {
+                LazyVGrid(columns: metricColumns, alignment: .leading, spacing: TypeTideTheme.Spacing.medium) {
                     metricCard("Captures", value: "\(captureSuccesses)", symbol: "text.magnifyingglass")
                     metricCard("Replacements", value: "\(replacementSuccesses)", symbol: "arrow.left.arrow.right")
                     metricCard("Translations", value: "\(translations.count)", symbol: "character.book.closed")

@@ -13,6 +13,7 @@ struct FirstLaunchView: View {
     private var shortcutsReady: Bool { TriggerController.shared.shortcutsReady }
     private var backendReady: Bool { backendResult?.isSuccess == true }
     private var canFinish: Bool { hasPermission && backendReady && shortcutsReady }
+    private var completedSteps: Int { [hasPermission, backendReady, shortcutsReady].filter { $0 }.count }
 
     var body: some View {
         ScrollView {
@@ -29,7 +30,16 @@ struct FirstLaunchView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                HStack(spacing: 10) {
+                    ProgressView(value: Double(completedSteps), total: 3)
+                        .tint(TypeTideTheme.accent)
+                    Text("\(completedSteps) of 3 complete")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+
                 setupRow(
+                    step: 1,
                     title: "Accessibility permission",
                     detail: hasPermission ? "Granted" : "Required to read and replace text in other apps.",
                     ready: hasPermission,
@@ -41,6 +51,7 @@ struct FirstLaunchView: View {
                 )
 
                 setupRow(
+                    step: 2,
                     title: "Translation backend",
                     detail: backendResult?.message ?? "Test Ollama or your configured cloud endpoint with synthetic text.",
                     ready: backendReady,
@@ -50,6 +61,7 @@ struct FirstLaunchView: View {
                 .disabled(isTestingBackend)
 
                 setupRow(
+                    step: 3,
                     title: "Global shortcuts",
                     detail: shortcutsReady
                         ? shortcutSummary
@@ -85,6 +97,7 @@ struct FirstLaunchView: View {
     }
 
     private func setupRow(
+        step: Int,
         title: String,
         detail: String,
         ready: Bool,
@@ -92,10 +105,16 @@ struct FirstLaunchView: View {
         actionLabel: String
     ) -> some View {
         HStack(alignment: .top, spacing: 14) {
-            Image(systemName: ready ? "checkmark.circle.fill" : "circle.dashed")
-                .font(.title2)
-                .foregroundStyle(ready ? .green : .orange)
-                .accessibilityHidden(true)
+            ZStack {
+                Circle().fill(ready ? TypeTideTheme.success : TypeTideTheme.accentSoft)
+                if ready {
+                    Image(systemName: "checkmark").foregroundStyle(.white)
+                } else {
+                    Text("\(step)").font(.callout.bold()).foregroundStyle(TypeTideTheme.accent)
+                }
+            }
+            .frame(width: 30, height: 30)
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
                 Text(detail).font(.callout).foregroundStyle(.secondary)
@@ -104,7 +123,7 @@ struct FirstLaunchView: View {
             Button(actionLabel, action: action)
         }
         .padding(14)
-        .background(.quaternary, in: .rect(cornerRadius: 12))
+        .background(.quaternary, in: .rect(cornerRadius: TypeTideTheme.Radius.card))
         .accessibilityElement(children: .contain)
     }
 

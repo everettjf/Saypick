@@ -129,9 +129,8 @@ struct BackendSettingsView: View {
                     .disabled(isTestingBackend)
                     Spacer()
                     if let result = healthResult {
-                        Label(result.isSuccess ? "Ready" : "Needs attention",
-                              systemImage: result.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(result.isSuccess ? .green : .orange)
+                        StatusPill(text: result.isSuccess ? "Ready" : "Needs attention",
+                                   style: result.isSuccess ? .success : .warning)
                     }
                 }
                 if let result = healthResult {

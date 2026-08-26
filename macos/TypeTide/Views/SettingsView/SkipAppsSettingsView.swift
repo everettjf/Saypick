@@ -7,7 +7,6 @@
 
 
 import SwiftUI
-import Ollama
 
 struct SkipAppsSettingsView: View {
     @AppStorage(AppSettings.Keys.skipApps) private var appSkipListString = ""
@@ -25,68 +24,53 @@ struct SkipAppsSettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            SettingsSectionHeader(symbol: "nosign", color: .red,
-                                  title: "Skip Apps", subtitle: "Disable TypeTide in these applications")
-                .padding(.horizontal)
-                .padding(.top)
+        Form {
+            Section {
+                HStack {
+                    TextField("App name, for example Terminal or Xcode", text: $newAppName)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(addApp)
 
-            Divider()
-
-            // Add new app
-            HStack {
-                TextField("Enter app name (e.g., Terminal, Xcode)", text: $newAppName)
-                    .textFieldStyle(.roundedBorder)
-
-                Button(action: addApp) {
-                    Label("Add", systemImage: "plus")
+                    Button(action: addApp) {
+                        Label("Add", systemImage: "plus")
+                    }
+                    .disabled(newAppName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .buttonStyle(.borderedProminent)
                 }
-                .disabled(newAppName.trimmingCharacters(in: .whitespaces).isEmpty)
-                .buttonStyle(.borderedProminent)
+                SettingsNote(text: "Use the application name shown in the menu bar. TypeTide will ignore selections in matching apps.")
+            } header: {
+                SettingsSectionHeader(symbol: "plus.app.fill", color: .red,
+                                      title: "Add an app", subtitle: "Disable TypeTide in sensitive or incompatible apps")
             }
-            .padding(.horizontal)
 
-            // App list
-            if !appSkipList.isEmpty {
-                List {
+            Section {
+                if appSkipList.isEmpty {
+                    SettingsEmptyState(
+                        title: "Monitoring all apps",
+                        message: "No exclusions are configured. TypeTide is active wherever selection capture is supported.",
+                        symbol: "checkmark.shield.fill",
+                        tint: TypeTideTheme.success
+                    )
+                } else {
                     ForEach(appSkipList, id: \.self) { app in
                         HStack {
                             Label(app, systemImage: "app.fill")
-                                .foregroundColor(.primary)
-
                             Spacer()
-
-                            Button(action: { removeApp(app) }) {
-                                Image(systemName: "trash")
-                                    .foregroundColor(.red)
+                            Button(role: .destructive, action: { removeApp(app) }) {
+                                Label("Remove", systemImage: "trash")
+                                    .labelStyle(.iconOnly)
                             }
                             .buttonStyle(.plain)
+                            .help("Remove \(app)")
                         }
                     }
                 }
-                .listStyle(.inset)
-            } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(.green)
-
-                    Text("Monitoring All Apps")
-                        .font(.headline)
-
-                    Text("No apps in skip list. Translation is active for all applications.")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } header: {
+                SettingsSectionHeader(symbol: "nosign", color: .red,
+                                      title: "Excluded apps", subtitle: "\(appSkipList.count) configured")
             }
-
-            Spacer()
         }
-        .navigationTitle("Skip Apps")
+        .settingsPage("Skip Apps")
     }
 
     private func addApp() {
