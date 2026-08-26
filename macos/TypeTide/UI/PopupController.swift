@@ -18,8 +18,8 @@ final class PopupController {
     private var clickMonitor: Any?
     private var keyMonitor: Any?
 
-    private let width: CGFloat = 380
-    private let estimatedHeight: CGFloat = 150
+    private let width = TypeTideTheme.Control.popupWidth
+    private let estimatedHeight: CGFloat = 176
 
     /// 在锚点附近显示弹窗，返回可写入流式结果的 model。
     @discardableResult

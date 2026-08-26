@@ -77,6 +77,7 @@ final class TranslationPopupModel: ObservableObject {
 struct TranslationPopupView: View {
     @ObservedObject var model: TranslationPopupModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var copied = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -84,11 +85,11 @@ struct TranslationPopupView: View {
             Divider()
             content
         }
-        .frame(width: 380)
+        .frame(width: TypeTideTheme.Control.popupWidth)
         .background(Color(nsColor: .windowBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(.rect(cornerRadius: TypeTideTheme.Radius.popup))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: TypeTideTheme.Radius.popup)
                 .stroke(Color.primary.opacity(0.12), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.18), radius: 16, x: 0, y: 6)
@@ -100,10 +101,10 @@ struct TranslationPopupView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 14, height: 14)
-                .foregroundColor(.blue.opacity(0.85))
+                .foregroundStyle(TypeTideTheme.accent)
             Text("TypeTide")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Spacer()
             targetMenu
             Button {
@@ -111,9 +112,13 @@ struct TranslationPopupView: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
+                    .frame(width: TypeTideTheme.Control.minimumHitSize,
+                           height: TypeTideTheme.Control.minimumHitSize)
             }
             .buttonStyle(.plain)
+            .help("Close")
+            .accessibilityLabel("Close translation")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
@@ -141,7 +146,10 @@ struct TranslationPopupView: View {
                 Text(model.targetLanguage.shortName)
                     .font(.system(size: 11, weight: .medium))
             }
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, TypeTideTheme.Spacing.xSmall)
+            .frame(minHeight: TypeTideTheme.Control.compactHeight)
+            .background(.quaternary.opacity(0.55), in: .rect(cornerRadius: TypeTideTheme.Radius.control))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -172,7 +180,11 @@ struct TranslationPopupView: View {
                     }
                 }
             } else {
-                TideTranslationText(model: model, reduceMotion: reduceMotion)
+                ScrollView {
+                    TideTranslationText(model: model, reduceMotion: reduceMotion)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 260)
             }
 
             if !model.translation.isEmpty && model.errorText == nil {
@@ -180,12 +192,19 @@ struct TranslationPopupView: View {
                     Spacer()
                     Button {
                         model.onCopy?()
+                        copied = true
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(1.2))
+                            copied = false
+                        }
                     } label: {
-                        Label("Copy", systemImage: "doc.on.doc")
+                        Label(copied ? "Copied" : "Copy",
+                              systemImage: copied ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 12))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .accessibilityHint("Copies the complete translation to the clipboard")
 
                     if model.onReplace != nil {
                         Button {
@@ -247,6 +266,9 @@ private struct TideTranslationText: View {
             }
         }
         .frame(minHeight: 24)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(model.translation.isEmpty ? "Translating" : "Translation")
+        .accessibilityValue(model.translation.isEmpty ? model.original : model.translation)
         .animation(reduceMotion ? .easeOut(duration: 0.16) : .easeInOut(duration: 0.28),
                    value: model.translation.isEmpty)
     }
@@ -277,7 +299,7 @@ private struct TideParticleWave: View {
                     let fade = max(0.15, 0.78 - Double(trail) * 0.13)
                     let color = index.isMultiple(of: 3)
                         ? Color.cyan.opacity(fade)
-                        : Color.indigo.opacity(fade)
+                        : TypeTideTheme.accent.opacity(fade)
                     graphics.fill(
                         Path(ellipseIn: CGRect(x: x - radius, y: y - radius,
                                               width: radius * 2, height: radius * 2)),

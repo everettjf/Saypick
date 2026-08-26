@@ -176,11 +176,12 @@ void PopupWindow::layoutAndResize() {
     MONITORINFO sizeInfo{sizeof(sizeInfo)};
     GetMonitorInfoW(sizeMon, &sizeInfo);
     const int workWidth = sizeInfo.rcWork.right - sizeInfo.rcWork.left;
-    width_ = std::clamp(workWidth / 3, px(360), px(520));
+    width_ = std::clamp(workWidth / 3, px(ui::control::PopupMinWidth),
+                        px(ui::control::PopupMaxWidth));
     const int width = width_;
-    const int headerH = px(34);
-    const int padX = px(14);
-    const int padY = px(12);
+    const int headerH = px(36);
+    const int padX = px(ui::spacing::Large);
+    const int padY = px(ui::spacing::Medium);
     const int contentW = width - padX * 2;
 
     // 正文高度
@@ -211,7 +212,7 @@ void PopupWindow::layoutAndResize() {
     bool hasButtons = (!translation_.empty() && error_.empty()) ||
                       (!error_.empty() && static_cast<bool>(onRetry));
     const int btnH = px(32);
-    const int btnGap = px(10);
+    const int btnGap = px(ui::spacing::Medium);
 
     int height = headerH + 1 + padY + textH + (hasButtons ? btnGap + btnH : 0) + padY;
 
@@ -279,9 +280,9 @@ void PopupWindow::paint(HDC dc) {
     DeleteObject(border);
 
     SetBkMode(dc, TRANSPARENT);
-    const int headerH = px(34);
-    const int padX = px(14);
-    const int padY = px(12);
+    const int headerH = px(36);
+    const int padX = px(ui::spacing::Large);
+    const int padY = px(ui::spacing::Medium);
 
     // ---- 头部 ----
     SelectObject(dc, fontHeader_);
@@ -294,7 +295,13 @@ void PopupWindow::paint(HDC dc) {
     // 目标语言 chip
     {
         HBRUSH chipBg = CreateSolidBrush(hover_ == Region::Lang ? th.button : th.surface);
-        FillRect(dc, &rcLang_, chipBg);
+        HPEN chipPen = CreatePen(PS_SOLID, 1, hover_ == Region::Lang ? th.buttonBorder : th.surface);
+        HGDIOBJ oldBrush = SelectObject(dc, chipBg);
+        HGDIOBJ oldPen = SelectObject(dc, chipPen);
+        RoundRect(dc, rcLang_.left, rcLang_.top, rcLang_.right, rcLang_.bottom, px(8), px(8));
+        SelectObject(dc, oldPen);
+        SelectObject(dc, oldBrush);
+        DeleteObject(chipPen);
         DeleteObject(chipBg);
         SelectObject(dc, fontSmall_);
         SetTextColor(dc, th.secondary);
@@ -396,13 +403,14 @@ void PopupWindow::paint(HDC dc) {
             fill = RGB(std::min(255, rr + up), std::min(255, gg + up), std::min(255, bb + up));
         }
         HBRUSH b = CreateSolidBrush(fill);
-        FillRect(dc, &r, b);
+        HPEN pen = CreatePen(PS_SOLID, 1, prominent ? fill : th.buttonBorder);
+        HGDIOBJ oldBrush = SelectObject(dc, b);
+        HGDIOBJ oldPen = SelectObject(dc, pen);
+        RoundRect(dc, r.left, r.top, r.right, r.bottom, px(ui::radius::Control), px(ui::radius::Control));
+        SelectObject(dc, oldPen);
+        SelectObject(dc, oldBrush);
+        DeleteObject(pen);
         DeleteObject(b);
-        if (!prominent) {
-            HBRUSH br = CreateSolidBrush(th.buttonBorder);
-            FrameRect(dc, &r, br);
-            DeleteObject(br);
-        }
         SelectObject(dc, fontSmall_);
         SetTextColor(dc, prominent ? ui::AccentText : th.text);
         DrawTextW(dc, label, -1, (RECT*)&r, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
