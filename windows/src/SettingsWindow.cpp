@@ -70,6 +70,8 @@ struct State {
     bool backendReady = false;
     bool shortcutsReady = false;
     bool dark = false;
+    int clientWidth = 0;
+    int clientHeight = 0;
 };
 
 State g;
@@ -115,7 +117,7 @@ HWND ctrl(int id) { return GetDlgItem(g.hwnd, id); }
 
 HIMAGELIST createTabImages() {
     const int size = px(16);
-    HIMAGELIST images = ImageList_Create(size, size, ILC_COLOR24 | ILC_MASK, 7, 0);
+    HIMAGELIST images = ImageList_Create(size, size, ILC_COLOR24 | ILC_MASK, 8, 0);
     HDC dc = CreateCompatibleDC(nullptr);
     BITMAPINFO info{};
     info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -133,7 +135,7 @@ HIMAGELIST createTabImages() {
     HGDIOBJ oldPen = SelectObject(dc, pen);
     HGDIOBJ oldBrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
     auto p = [](int value) { return px(value); };
-    for (int icon = 0; icon < 7; ++icon) {
+    for (int icon = 0; icon < 8; ++icon) {
         RECT rc{0, 0, size, size};
         FillRect(dc, &rc, maskBrush);
         switch (icon) {
@@ -177,7 +179,12 @@ HIMAGELIST createTabImages() {
             MoveToEx(dc, p(5), p(2), nullptr); LineTo(dc, p(14), p(2));
             LineTo(dc, p(14), p(11));
             break;
-        case 6: // About: info
+        case 6: // Diagnostics: pulse
+            MoveToEx(dc, p(1), p(8), nullptr); LineTo(dc, p(4), p(8));
+            LineTo(dc, p(6), p(3)); LineTo(dc, p(9), p(13));
+            LineTo(dc, p(11), p(8)); LineTo(dc, p(15), p(8));
+            break;
+        case 7: // About: info
             Ellipse(dc, p(2), p(2), p(14), p(14));
             Ellipse(dc, p(7), p(4), p(9), p(6));
             MoveToEx(dc, p(8), p(7), nullptr); LineTo(dc, p(8), p(12));
@@ -597,6 +604,50 @@ void showPage(int index) {
             ShowWindow(c, p == index ? SW_SHOW : SW_HIDE);
 }
 
+void layoutForClientSize(int width, int height) {
+    if (!g.hwnd || width <= 0 || height <= 0) return;
+    if (g.clientWidth == 0 || g.clientHeight == 0) {
+        g.clientWidth = width;
+        g.clientHeight = height;
+        return;
+    }
+
+    const int dx = width - g.clientWidth;
+    const int dy = height - g.clientHeight;
+    if (dx == 0 && dy == 0) return;
+
+    HWND nav = ctrl(kTab);
+    if (nav) {
+        RECT r{};
+        GetWindowRect(nav, &r);
+        MapWindowPoints(nullptr, g.hwnd, reinterpret_cast<POINT*>(&r), 2);
+        SetWindowPos(nav, nullptr, r.left, r.top, r.right - r.left,
+                     std::max(px(300), r.bottom - r.top + dy), SWP_NOZORDER);
+    }
+
+    for (const auto& page : g.pages) {
+        for (HWND control : page) {
+            RECT r{};
+            GetWindowRect(control, &r);
+            MapWindowPoints(nullptr, g.hwnd, reinterpret_cast<POINT*>(&r), 2);
+            int controlWidth = r.right - r.left;
+            int controlHeight = r.bottom - r.top;
+            const int rightGap = g.clientWidth - r.right;
+            const int id = GetDlgCtrlID(control);
+            if (rightGap <= px(48) || (id >= kPageTitle0 && id <= kPageTitle7))
+                controlWidth = std::max(px(80), controlWidth + dx);
+            if (id == kSkipList)
+                controlHeight = std::max(px(120), controlHeight + dy);
+            SetWindowPos(control, nullptr, r.left, r.top, controlWidth, controlHeight,
+                         SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
+
+    g.clientWidth = width;
+    g.clientHeight = height;
+    InvalidateRect(g.hwnd, nullptr, TRUE);
+}
+
 // ---------- 变更处理 ----------
 
 void onCommand(int id, int code) {
@@ -909,6 +960,15 @@ void onCommand(int id, int code) {
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
+    case WM_GETMINMAXINFO: {
+        auto* info = reinterpret_cast<MINMAXINFO*>(lp);
+        info->ptMinTrackSize = {px(760), px(520)};
+        return 0;
+    }
+    case WM_SIZE:
+        if (wp != SIZE_MINIMIZED)
+            layoutForClientSize(LOWORD(lp), HIWORD(lp));
+        return 0;
     case WM_COMMAND:
         onCommand(LOWORD(wp), HIWORD(wp));
         return 0;
@@ -1000,7 +1060,11 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         SetTextColor(item->hDC, textColor());
         SelectObject(item->hDC, g.font);
         RECT tr = item->rcItem;
-        tr.left += px(18);
+        if (g.tabImages && item->itemID < 8) {
+            ImageList_Draw(g.tabImages, static_cast<int>(item->itemID), item->hDC,
+                           item->rcItem.left + px(16), item->rcItem.top + px(13), ILD_TRANSPARENT);
+        }
+        tr.left += px(42);
         DrawTextW(item->hDC, text, -1, &tr, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
         return TRUE;
     }
@@ -1094,10 +1158,10 @@ void open(HWND appWindow) {
     g.dpi = GetDpiForSystem();
     int w = px(820), h = px(560);
     RECT wr{0, 0, w, h};
-    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME), FALSE);
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
     g.hwnd = CreateWindowExW(0, kClassName, L"TypeTide Settings",
-                             (WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME)) | WS_VISIBLE,
+                             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                              CW_USEDEFAULT, CW_USEDEFAULT,
                              wr.right - wr.left, wr.bottom - wr.top,
                              nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
@@ -1126,6 +1190,8 @@ void open(HWND appWindow) {
     g.fontTitle = CreateFontIndirectW(&title);
 
     g.loading = true;
+    g.clientWidth = w;
+    g.clientHeight = h;
 
     // Windows 11-style left navigation.
     HWND tab = CreateWindowExW(0, L"LISTBOX", L"",
@@ -1135,6 +1201,7 @@ void open(HWND appWindow) {
                                (HMENU)kTab, GetModuleHandleW(nullptr), nullptr);
     SendMessageW(tab, WM_SETFONT, (WPARAM)g.font, TRUE);
     SendMessageW(tab, LB_SETITEMHEIGHT, 0, px(42));
+    g.tabImages = createTabImages();
     const wchar_t* names[] = {L"General", L"Translation", L"Languages", L"Shortcuts",
                               L"Behavior", L"Excluded apps", L"Diagnostics", L"About"};
     for (int i = 0; i < 8; ++i) {
