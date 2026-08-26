@@ -86,6 +86,7 @@ final class SelectionIconWindow {
 private struct SelectionIconView: View {
     let action: () -> Void
     @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
@@ -93,14 +94,19 @@ private struct SelectionIconView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 17, height: 17)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(width: 28, height: 28)
                 .background(
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(Color.accentColor.opacity(hovering ? 1.0 : 0.9))
+                    RoundedRectangle(cornerRadius: TypeTideTheme.Radius.control)
+                        .fill(TypeTideTheme.accent.opacity(hovering ? 1.0 : 0.92))
                 )
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        .scaleEffect(hovering && !reduceMotion ? 1.06 : 1)
+        .animation(.easeOut(duration: reduceMotion ? 0 : 0.12), value: hovering)
+        .help("Translate selection")
+        .accessibilityLabel("Translate selected text")
+        .accessibilityHint("Opens the TypeTide translation popup")
     }
 }

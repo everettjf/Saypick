@@ -49,7 +49,14 @@ struct Palette {
     COLORREF danger;
 };
 
-inline Palette palette(bool dark) {
+inline Palette palette(bool dark, bool highContrast = false) {
+    if (highContrast) {
+        return {GetSysColor(COLOR_WINDOW), GetSysColor(COLOR_WINDOW),
+                GetSysColor(COLOR_WINDOWTEXT), GetSysColor(COLOR_GRAYTEXT),
+                GetSysColor(COLOR_WINDOWTEXT), GetSysColor(COLOR_BTNFACE),
+                GetSysColor(COLOR_BTNTEXT), GetSysColor(COLOR_HIGHLIGHT),
+                GetSysColor(COLOR_HIGHLIGHT)};
+    }
     if (dark) {
         return {RGB(0x20, 0x20, 0x22), RGB(0x2B, 0x2B, 0x2E),
                 RGB(0xF2, 0xF2, 0xF4), RGB(0xB0, 0xB0, 0xB8),
@@ -60,6 +67,12 @@ inline Palette palette(bool dark) {
             RGB(0x20, 0x20, 0x24), RGB(0x67, 0x67, 0x72),
             RGB(0xE4, 0xE4, 0xE8), RGB(0xF2, 0xF2, 0xF5),
             RGB(0xD5, 0xD5, 0xDA), WarningLight, DangerLight};
+}
+
+inline bool highContrastEnabled() {
+    HIGHCONTRASTW contrast{sizeof(contrast)};
+    return SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
+           (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0;
 }
 
 } // namespace ui

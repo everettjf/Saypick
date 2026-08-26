@@ -70,6 +70,7 @@ struct State {
     bool backendReady = false;
     bool shortcutsReady = false;
     bool dark = false;
+    bool highContrast = false;
     int clientWidth = 0;
     int clientHeight = 0;
 };
@@ -80,10 +81,10 @@ HWND ctrl(int id);
 
 int px(int v) { return MulDiv(v, (int)g.dpi, 96); }
 
-COLORREF pageBg() { return ui::palette(g.dark).background; }
+COLORREF pageBg() { return ui::palette(g.dark, g.highContrast).background; }
 COLORREF navBg() { return g.dark ? RGB(0x19, 0x19, 0x1B) : RGB(0xF0, 0xEF, 0xF5); }
-COLORREF textColor() { return ui::palette(g.dark).text; }
-COLORREF secondaryColor() { return ui::palette(g.dark).secondary; }
+COLORREF textColor() { return ui::palette(g.dark, g.highContrast).text; }
+COLORREF secondaryColor() { return ui::palette(g.dark, g.highContrast).secondary; }
 HBRUSH pageBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3)); static HBRUSH dark = CreateSolidBrush(RGB(0x20, 0x20, 0x22)); return g.dark ? dark : light; }
 HBRUSH navBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xF0, 0xEF, 0xF5)); static HBRUSH dark = CreateSolidBrush(RGB(0x19, 0x19, 0x1B)); return g.dark ? dark : light; }
 HBRUSH editBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF)); static HBRUSH dark = CreateSolidBrush(RGB(0x2B, 0x2B, 0x2E)); return g.dark ? dark : light; }
@@ -1103,6 +1104,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
     case WM_SETTINGCHANGE:
         g.dark = systemUsesDarkMode();
+        g.highContrast = ui::highContrastEnabled();
         {
             BOOL dark = g.dark;
             DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
@@ -1167,6 +1169,7 @@ void open(HWND appWindow) {
                              nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
     if (!g.hwnd) return;
     g.dark = systemUsesDarkMode();
+    g.highContrast = ui::highContrastEnabled();
     BOOL dark = g.dark;
     DwmSetWindowAttribute(g.hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 

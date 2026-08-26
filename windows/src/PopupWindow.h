@@ -58,6 +58,7 @@ private:
     bool placedAbove_ = false;
     bool showReplace_ = false;
     bool dark_ = false;
+    bool highContrast_ = false;
     UINT dpi_ = 96;
 
     std::wstring original_;

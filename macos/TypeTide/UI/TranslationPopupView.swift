@@ -163,7 +163,7 @@ struct TranslationPopupView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Label(err, systemImage: "exclamationmark.triangle.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(.orange)
+                        .foregroundStyle(TypeTideTheme.warning)
                         .fixedSize(horizontal: false, vertical: true)
                     if model.onRetry != nil {
                         HStack {

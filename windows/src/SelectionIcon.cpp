@@ -1,15 +1,13 @@
 #include "SelectionIcon.h"
 #include "BrandMark.h"
 #include "Hooks.h"
+#include "UITheme.h"
 #include <dwmapi.h>
 #include <algorithm>
 
 namespace {
 constexpr wchar_t kClassName[] = L"TypeTideSelectionIcon";
 constexpr UINT_PTR kAutoHideTimer = 1;
-constexpr BYTE kAccentRed = 0x7C;
-constexpr BYTE kAccentGreen = 0x5C;
-constexpr BYTE kAccentBlue = 0xFF;
 } // namespace
 
 SelectionIcon& SelectionIcon::shared() {
@@ -109,19 +107,21 @@ LRESULT SelectionIcon::handle(UINT msg, WPARAM wp, LPARAM lp) {
         HDC dc = BeginPaint(hwnd_, &ps);
         RECT rc{};
         GetClientRect(hwnd_, &rc);
-        int boost = hover_ ? 18 : 0;
+        const bool highContrast = ui::highContrastEnabled();
+        const COLORREF accent = highContrast ? GetSysColor(COLOR_HIGHLIGHT) : ui::Accent;
+        int boost = hover_ && !highContrast ? 18 : 0;
         auto brighten = [boost](BYTE channel) {
             return static_cast<BYTE>(std::min(255, static_cast<int>(channel) + boost));
         };
-        HBRUSH bg = CreateSolidBrush(RGB(brighten(kAccentRed),
-                                         brighten(kAccentGreen),
-                                         brighten(kAccentBlue)));
+        HBRUSH bg = CreateSolidBrush(RGB(brighten(GetRValue(accent)),
+                                         brighten(GetGValue(accent)),
+                                         brighten(GetBValue(accent))));
         FillRect(dc, &rc, bg);
         DeleteObject(bg);
         UINT dpi = GetDpiForWindow(hwnd_);
         const int inset = MulDiv(4, (int)dpi, 96);
         RECT mark{rc.left + inset, rc.top + inset, rc.right - inset, rc.bottom - inset};
-        brand::DrawMark(dc, mark, RGB(255, 255, 255));
+        brand::DrawMark(dc, mark, highContrast ? GetSysColor(COLOR_HIGHLIGHTTEXT) : ui::AccentText);
         EndPaint(hwnd_, &ps);
         return 0;
     }

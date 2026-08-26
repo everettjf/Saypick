@@ -60,6 +60,7 @@ void PopupWindow::show(const std::wstring& original, Language target, RECT ancho
     showReplace_ = showReplace;
     hover_ = Region::None;
     dark_ = systemPrefersDark();
+    highContrast_ = ui::highContrastEnabled();
 
     static bool registered = [] {
         WNDCLASSW wc{};
@@ -268,7 +269,7 @@ void PopupWindow::layoutAndResize() {
 void PopupWindow::paint(HDC dc) {
     RECT client{};
     GetClientRect(hwnd_, &client);
-    const ui::Palette th = ui::palette(dark_);
+    const ui::Palette th = ui::palette(dark_, highContrast_);
     auto px = [&](int v) { return MulDiv(v, (int)dpi_, 96); };
 
     // 背景 + 边框
@@ -363,7 +364,7 @@ void PopupWindow::paint(HDC dc) {
             const int y = clipText.top + row * std::max(1, static_cast<int>(clipText.bottom - clipText.top - px(5)) / 6)
                           + (int)wave;
             const int radius = px(1 + ((i * 7) % 3));
-            COLORREF color = (i % 3 == 0)
+            COLORREF color = highContrast_ ? th.text : (i % 3 == 0)
                 ? (dark_ ? RGB(0x39, 0xD9, 0xE8) : RGB(0x00, 0x9E, 0xC4))
                 : (dark_ ? RGB(0x98, 0x83, 0xFF) : RGB(0x6B, 0x4B, 0xE8));
             HBRUSH dot = CreateSolidBrush(color);
@@ -395,7 +396,7 @@ void PopupWindow::paint(HDC dc) {
     // ---- 按钮 ----
     auto drawButton = [&](const RECT& r, const wchar_t* label, bool prominent, bool hovered) {
         if (r.right <= r.left) return;
-        COLORREF fill = prominent ? ui::Accent : th.button;
+        COLORREF fill = prominent ? (highContrast_ ? GetSysColor(COLOR_HIGHLIGHT) : ui::Accent) : th.button;
         if (hovered) {
             // 悬停微调亮度
             int rr = GetRValue(fill), gg = GetGValue(fill), bb = GetBValue(fill);
