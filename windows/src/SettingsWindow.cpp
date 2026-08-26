@@ -622,8 +622,9 @@ void layoutForClientSize(int width, int height) {
         RECT r{};
         GetWindowRect(nav, &r);
         MapWindowPoints(nullptr, g.hwnd, reinterpret_cast<POINT*>(&r), 2);
-        SetWindowPos(nav, nullptr, r.left, r.top, r.right - r.left,
-                     std::max(px(300), r.bottom - r.top + dy), SWP_NOZORDER);
+        const int navWidth = static_cast<int>(r.right - r.left);
+        const int navHeight = std::max(px(300), static_cast<int>(r.bottom - r.top) + dy);
+        SetWindowPos(nav, nullptr, r.left, r.top, navWidth, navHeight, SWP_NOZORDER);
     }
 
     for (const auto& page : g.pages) {
