@@ -3,6 +3,7 @@
 #include "Clipboard.h"
 #include "Hooks.h"
 #include "Util.h"
+#include "UITheme.h"
 #include <dwmapi.h>
 #include <windowsx.h>
 #include <algorithm>
@@ -14,30 +15,12 @@ constexpr wchar_t kClassName[] = L"TypeTidePopup";
 constexpr UINT_PTR kCopiedTimer = 1;
 constexpr UINT_PTR kTideTimer = 2;
 
-// 品牌紫（与 README badge 一致）
-constexpr COLORREF kAccent = RGB(0x7C, 0x5C, 0xFF);
-constexpr COLORREF kAccentText = RGB(255, 255, 255);
-
 bool systemPrefersDark() {
     DWORD v = 1, size = sizeof(v);
     RegGetValueW(HKEY_CURRENT_USER,
                  L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
                  L"AppsUseLightTheme", RRF_RT_REG_DWORD, nullptr, &v, &size);
     return v == 0;
-}
-
-struct Theme {
-    COLORREF bg, text, secondary, divider, buttonBg, buttonBorder, error;
-};
-
-Theme themeFor(bool dark) {
-    if (dark)
-        return {RGB(0x2B, 0x2B, 0x2E), RGB(0xF2, 0xF2, 0xF2), RGB(0x9A, 0x9A, 0xA0),
-                RGB(0x45, 0x45, 0x4A), RGB(0x3A, 0x3A, 0x3F), RGB(0x55, 0x55, 0x5A),
-                RGB(0xFF, 0xA5, 0x4C)};
-    return {RGB(0xFF, 0xFF, 0xFF), RGB(0x1D, 0x1D, 0x1F), RGB(0x71, 0x71, 0x76),
-            RGB(0xE4, 0xE4, 0xE8), RGB(0xF2, 0xF2, 0xF5), RGB(0xD5, 0xD5, 0xDA),
-            RGB(0xD9, 0x77, 0x06)};
 }
 
 } // namespace
@@ -284,11 +267,11 @@ void PopupWindow::layoutAndResize() {
 void PopupWindow::paint(HDC dc) {
     RECT client{};
     GetClientRect(hwnd_, &client);
-    Theme th = themeFor(dark_);
+    const ui::Palette th = ui::palette(dark_);
     auto px = [&](int v) { return MulDiv(v, (int)dpi_, 96); };
 
     // 背景 + 边框
-    HBRUSH bg = CreateSolidBrush(th.bg);
+    HBRUSH bg = CreateSolidBrush(th.surface);
     FillRect(dc, &client, bg);
     DeleteObject(bg);
     HBRUSH border = CreateSolidBrush(th.divider);
@@ -303,14 +286,14 @@ void PopupWindow::paint(HDC dc) {
     // ---- 头部 ----
     SelectObject(dc, fontHeader_);
     RECT rcMark{padX, px(8), padX + px(18), px(26)};
-    brand::DrawMark(dc, rcMark, kAccent);
+    brand::DrawMark(dc, rcMark, ui::Accent);
     SetTextColor(dc, th.secondary);
     RECT rcBrand{rcMark.right + px(4), 0, client.right, headerH};
     DrawTextW(dc, L"TypeTide", -1, &rcBrand, DT_SINGLELINE | DT_VCENTER);
 
     // 目标语言 chip
     {
-        HBRUSH chipBg = CreateSolidBrush(hover_ == Region::Lang ? th.buttonBg : th.bg);
+        HBRUSH chipBg = CreateSolidBrush(hover_ == Region::Lang ? th.button : th.surface);
         FillRect(dc, &rcLang_, chipBg);
         DeleteObject(chipBg);
         SelectObject(dc, fontSmall_);
@@ -340,7 +323,7 @@ void PopupWindow::paint(HDC dc) {
     RECT rcText{padX, headerH + 1 + padY - scrollY_, client.right - padX,
                 headerH + 1 + padY - scrollY_ + textHeight_};
     if (!error_.empty()) {
-        SetTextColor(dc, th.error);
+        SetTextColor(dc, th.warning);
         std::wstring msg = L"⚠ " + error_;
         DrawTextW(dc, msg.c_str(), -1, &rcText, DT_WORDBREAK | DT_NOPREFIX);
     } else if (translation_.empty() && loading_) {
@@ -405,7 +388,7 @@ void PopupWindow::paint(HDC dc) {
     // ---- 按钮 ----
     auto drawButton = [&](const RECT& r, const wchar_t* label, bool prominent, bool hovered) {
         if (r.right <= r.left) return;
-        COLORREF fill = prominent ? kAccent : th.buttonBg;
+        COLORREF fill = prominent ? ui::Accent : th.button;
         if (hovered) {
             // 悬停微调亮度
             int rr = GetRValue(fill), gg = GetGValue(fill), bb = GetBValue(fill);
@@ -421,7 +404,7 @@ void PopupWindow::paint(HDC dc) {
             DeleteObject(br);
         }
         SelectObject(dc, fontSmall_);
-        SetTextColor(dc, prominent ? kAccentText : th.text);
+        SetTextColor(dc, prominent ? ui::AccentText : th.text);
         DrawTextW(dc, label, -1, (RECT*)&r, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
     };
     if (!translation_.empty() && error_.empty()) {

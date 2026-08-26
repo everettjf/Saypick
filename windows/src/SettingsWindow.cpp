@@ -8,6 +8,7 @@
 #include "Translator.h"
 #include "UpdateChecker.h"
 #include "Util.h"
+#include "UITheme.h"
 #include <commctrl.h>
 #include <commdlg.h>
 #include <dwmapi.h>
@@ -77,12 +78,10 @@ HWND ctrl(int id);
 
 int px(int v) { return MulDiv(v, (int)g.dpi, 96); }
 
-constexpr COLORREF kAccent = RGB(0x7C, 0x5C, 0xFF);
-
-COLORREF pageBg() { return g.dark ? RGB(0x20, 0x20, 0x22) : RGB(0xF3, 0xF3, 0xF3); }
+COLORREF pageBg() { return ui::palette(g.dark).background; }
 COLORREF navBg() { return g.dark ? RGB(0x19, 0x19, 0x1B) : RGB(0xF0, 0xEF, 0xF5); }
-COLORREF textColor() { return g.dark ? RGB(0xF2, 0xF2, 0xF4) : RGB(0x20, 0x20, 0x24); }
-COLORREF secondaryColor() { return g.dark ? RGB(0xB0, 0xB0, 0xB8) : RGB(0x67, 0x67, 0x72); }
+COLORREF textColor() { return ui::palette(g.dark).text; }
+COLORREF secondaryColor() { return ui::palette(g.dark).secondary; }
 HBRUSH pageBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3)); static HBRUSH dark = CreateSolidBrush(RGB(0x20, 0x20, 0x22)); return g.dark ? dark : light; }
 HBRUSH navBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xF0, 0xEF, 0xF5)); static HBRUSH dark = CreateSolidBrush(RGB(0x19, 0x19, 0x1B)); return g.dark ? dark : light; }
 HBRUSH editBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF)); static HBRUSH dark = CreateSolidBrush(RGB(0x2B, 0x2B, 0x2E)); return g.dark ? dark : light; }
@@ -991,7 +990,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         if (selected) {
             RECT accent{item->rcItem.left, item->rcItem.top + px(7),
                         item->rcItem.left + px(3), item->rcItem.bottom - px(7)};
-            HBRUSH ab = CreateSolidBrush(kAccent);
+            HBRUSH ab = CreateSolidBrush(ui::Accent);
             FillRect(item->hDC, &accent, ab);
             DeleteObject(ab);
         }

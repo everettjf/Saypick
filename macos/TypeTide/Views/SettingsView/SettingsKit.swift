@@ -89,11 +89,46 @@ struct SettingsNote: View {
     }
 }
 
+/// Compact semantic feedback shared by setup, backend and diagnostics pages.
+struct StatusPill: View {
+    let text: String
+    let style: TypeTideStatusStyle
+
+    var body: some View {
+        Label(text, systemImage: style.symbol)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(style.color)
+            .padding(.horizontal, TypeTideTheme.Spacing.small)
+            .frame(minHeight: TypeTideTheme.Control.compactHeight)
+            .background(style.color.opacity(0.1), in: .rect(cornerRadius: TypeTideTheme.Radius.control))
+            .accessibilityElement(children: .combine)
+    }
+}
+
+/// Consistent empty state that stays compact enough for Settings panes.
+struct SettingsEmptyState: View {
+    let title: String
+    let message: String
+    let symbol: String
+    var tint: Color = TypeTideTheme.accent
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(title, systemImage: symbol)
+                .foregroundStyle(tint)
+        } description: {
+            Text(message)
+        }
+        .frame(maxWidth: .infinity, minHeight: 180)
+    }
+}
+
 extension View {
     /// 统一的设置页容器：grouped form + 标题；去掉各页各自的 `.padding()`（grouped 自带边距）。
     func settingsPage(_ title: String) -> some View {
         self
             .formStyle(.grouped)
+            .tint(TypeTideTheme.accent)
             .accessibilityLabel(title)
             .frame(maxWidth: 640, alignment: .topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
