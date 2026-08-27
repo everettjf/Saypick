@@ -55,6 +55,15 @@ void replaceWorker(const std::wstring& text, bool selectAll) {
     DWORD started = GetTickCount();
     clipboard::Snapshot saved = clipboard::Take();
 
+    // Replace can be started by the popup's WM_LBUTTONDOWN handler.  Do not
+    // inject Ctrl+V until that physical click has completed: otherwise the
+    // foreground editor can process the tail of the click between the Ctrl
+    // and V events, leaving a literal "v" behind on some controls.
+    DWORD mouseDeadline = GetTickCount() + 250;
+    while ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) && GetTickCount() < mouseDeadline)
+        Sleep(5);
+    Sleep(20);
+
     static bool registered = [] {
         WNDCLASSW wc{};
         wc.lpfnWndProc = ownerProc;

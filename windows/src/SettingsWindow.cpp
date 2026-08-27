@@ -76,6 +76,7 @@ struct State {
 };
 
 State g;
+WNDPROC gHotkeyWndProc = nullptr;
 
 HWND ctrl(int id);
 
@@ -89,6 +90,40 @@ HBRUSH pageBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3
 HBRUSH navBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xF0, 0xEF, 0xF5)); static HBRUSH dark = CreateSolidBrush(RGB(0x19, 0x19, 0x1B)); return g.dark ? dark : light; }
 HBRUSH editBrush() { static HBRUSH light = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF)); static HBRUSH dark = CreateSolidBrush(RGB(0x2B, 0x2B, 0x2E)); return g.dark ? dark : light; }
 
+LRESULT CALLBACK hotkeyWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    if (g.dark && msg == WM_PAINT) {
+        PAINTSTRUCT ps{};
+        HDC dc = BeginPaint(hwnd, &ps);
+        RECT rc{};
+        GetClientRect(hwnd, &rc);
+        FillRect(dc, &rc, editBrush());
+        HBRUSH border = CreateSolidBrush(GetFocus() == hwnd ? ui::Accent : RGB(0x58, 0x58, 0x5E));
+        FrameRect(dc, &rc, border);
+        DeleteObject(border);
+        const WORD encoded = (WORD)SendMessageW(hwnd, HKM_GETHOTKEY, 0, 0);
+        Hotkey hotkey{};
+        hotkey.vk = LOBYTE(encoded);
+        hotkey.modifiers = 0;
+        const BYTE flags = HIBYTE(encoded);
+        if (flags & HOTKEYF_CONTROL) hotkey.modifiers |= MOD_CONTROL;
+        if (flags & HOTKEYF_SHIFT) hotkey.modifiers |= MOD_SHIFT;
+        if (flags & HOTKEYF_ALT) hotkey.modifiers |= MOD_ALT;
+        const std::wstring value = hotkey.vk ? hotkey.displayString() : L"None";
+        SetBkMode(dc, TRANSPARENT);
+        SetTextColor(dc, textColor());
+        HFONT oldFont = (HFONT)SelectObject(dc, g.font);
+        RECT textRect = rc;
+        textRect.left += px(5);
+        DrawTextW(dc, value.c_str(), -1, &textRect,
+                  DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS);
+        SelectObject(dc, oldFont);
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+    if (g.dark && msg == WM_ERASEBKGND) return 1;
+    return CallWindowProcW(gHotkeyWndProc, hwnd, msg, wp, lp);
+}
+
 bool systemUsesDarkMode() {
     DWORD light = 1, size = sizeof(light);
     HKEY key = nullptr;
@@ -99,6 +134,43 @@ bool systemUsesDarkMode() {
         RegCloseKey(key);
     }
     return light == 0;
+}
+
+void enableCommonControlDarkMode() {
+    // Common controls do not opt into their dark renderers merely from the
+    // DWM title-bar attribute.  This process-level opt-in must happen before
+    // the controls are created (supported on Windows 10 1809 and newer).
+    using SetPreferredAppModeFn = int (WINAPI*)(int);
+    if (HMODULE ux = GetModuleHandleW(L"uxtheme.dll")) {
+        auto setMode = reinterpret_cast<SetPreferredAppModeFn>(
+            GetProcAddress(ux, MAKEINTRESOURCEA(135)));
+        if (setMode) setMode(1); // PreferredAppMode::AllowDark
+    }
+}
+
+void applyTheme(HWND hwnd) {
+    if (!hwnd) return;
+    BOOL dark = g.dark;
+    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
+    SetWindowTheme(hwnd, g.dark ? L"DarkMode_Explorer" : L"Explorer", nullptr);
+    EnumChildWindows(hwnd, [](HWND child, LPARAM darkParam) -> BOOL {
+        const bool darkMode = darkParam != 0;
+        wchar_t cls[32]{};
+        GetClassNameW(child, cls, (int)std::size(cls));
+        const bool isHotkey = _wcsicmp(cls, HOTKEY_CLASSW) == 0;
+        const bool needsCfd = _wcsicmp(cls, L"ComboBox") == 0 ||
+                              _wcsicmp(cls, L"Edit") == 0;
+        // The legacy hotkey control has no dark themed renderer.  Disable its
+        // theme so WM_CTLCOLOREDIT can supply our dark background and text.
+        if (darkMode && isHotkey)
+            SetWindowTheme(child, L"", L"");
+        else
+            SetWindowTheme(child, darkMode ? (needsCfd ? L"DarkMode_CFD" : L"DarkMode_Explorer")
+                                           : L"Explorer", nullptr);
+        return TRUE;
+    }, (LPARAM)g.dark);
+    RedrawWindow(hwnd, nullptr, nullptr,
+                 RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
 }
 
 void updateFirstRunCompletion() {
@@ -228,6 +300,11 @@ HWND make(const wchar_t* cls, const wchar_t* text, DWORD style, int x, int y, in
           int id, DWORD exStyle = 0) {
     HWND c = CreateWindowExW(exStyle, cls, text, WS_CHILD | style, px(x), px(y), px(w), px(h),
                              g.hwnd, (HMENU)(INT_PTR)id, GetModuleHandleW(nullptr), nullptr);
+    if (_wcsicmp(cls, HOTKEY_CLASSW) == 0) {
+        WNDPROC original = reinterpret_cast<WNDPROC>(
+            SetWindowLongPtrW(c, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(hotkeyWndProc)));
+        if (!gHotkeyWndProc) gHotkeyWndProc = original;
+    }
     SendMessageW(c, WM_SETFONT, (WPARAM)g.font, TRUE);
     return c;
 }
@@ -1080,7 +1157,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
         SetBkMode((HDC)wp, TRANSPARENT);
         SetTextColor((HDC)wp, textColor());
-        return (LRESULT)GetStockObject(NULL_BRUSH);
+        return (LRESULT)pageBrush();
     }
     case WM_CTLCOLOREDIT: {
         SetBkColor((HDC)wp, g.dark ? RGB(0x2B, 0x2B, 0x2E) : RGB(0xFF, 0xFF, 0xFF));
@@ -1090,7 +1167,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_CTLCOLORBTN:
         SetBkMode((HDC)wp, TRANSPARENT);
         SetTextColor((HDC)wp, textColor());
-        return (LRESULT)GetStockObject(NULL_BRUSH);
+        return (LRESULT)pageBrush();
     case WM_CTLCOLORLISTBOX:
         SetBkColor((HDC)wp, navBg());
         SetTextColor((HDC)wp, textColor());
@@ -1106,14 +1183,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_SETTINGCHANGE:
         g.dark = systemUsesDarkMode();
         g.highContrast = ui::highContrastEnabled();
-        {
-            BOOL dark = g.dark;
-            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
-            for (auto& page : g.pages)
-                for (HWND control : page)
-                    SetWindowTheme(control, g.dark ? L"DarkMode_Explorer" : L"Explorer", nullptr);
-        }
-        InvalidateRect(hwnd, nullptr, TRUE);
+        applyTheme(hwnd);
         return 0;
     case WM_CLOSE:
         DestroyWindow(hwnd);
@@ -1141,6 +1211,7 @@ void open(HWND appWindow) {
         return;
     }
     g.appWindow = appWindow;
+    enableCommonControlDarkMode();
 
     static bool registered = [] {
         INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_TAB_CLASSES | ICC_HOTKEY_CLASS | ICC_LINK_CLASS |
@@ -1171,8 +1242,6 @@ void open(HWND appWindow) {
     if (!g.hwnd) return;
     g.dark = systemUsesDarkMode();
     g.highContrast = ui::highContrastEnabled();
-    BOOL dark = g.dark;
-    DwmSetWindowAttribute(g.hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 
     HICON smallIcon = (HICON)LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APPICON),
                                         IMAGE_ICON, px(16), px(16), LR_DEFAULTCOLOR | LR_SHARED);
@@ -1214,9 +1283,7 @@ void open(HWND appWindow) {
     SendMessageW(tab, LB_SETCURSEL, 0, 0);
 
     buildPages();
-    for (auto& page : g.pages)
-        for (HWND control : page)
-            SetWindowTheme(control, g.dark ? L"DarkMode_Explorer" : L"Explorer", nullptr);
+    applyTheme(g.hwnd);
     showPage(0);
     g.loading = false;
 
