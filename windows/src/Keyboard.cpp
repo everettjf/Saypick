@@ -1,4 +1,5 @@
 #include "Keyboard.h"
+#include "Util.h"
 #include <vector>
 
 namespace keyboard {
@@ -32,7 +33,10 @@ void SendCtrlCombo(WORD vk) {
     addKey(seq, vk, false);
     addKey(seq, VK_CONTROL, false);
 
-    SendInput((UINT)seq.size(), seq.data(), sizeof(INPUT));
+    const UINT sent = SendInput((UINT)seq.size(), seq.data(), sizeof(INPUT));
+    if (sent != seq.size())
+        util::Log("SendCtrlCombo vk=%u sent=%u/%zu error=%lu", vk, sent, seq.size(),
+                  GetLastError());
 }
 
 } // namespace keyboard
