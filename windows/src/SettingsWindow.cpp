@@ -97,7 +97,7 @@ LRESULT CALLBACK hotkeyWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         RECT rc{};
         GetClientRect(hwnd, &rc);
         FillRect(dc, &rc, editBrush());
-        HBRUSH border = CreateSolidBrush(GetFocus() == hwnd ? kAccent : RGB(0x58, 0x58, 0x5E));
+        HBRUSH border = CreateSolidBrush(GetFocus() == hwnd ? ui::Accent : RGB(0x58, 0x58, 0x5E));
         FrameRect(dc, &rc, border);
         DeleteObject(border);
         const WORD encoded = (WORD)SendMessageW(hwnd, HKM_GETHOTKEY, 0, 0);
