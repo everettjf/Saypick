@@ -91,7 +91,9 @@ void PopupWindow::show(const std::wstring& original, Language target, RECT ancho
     placedAbove_ = false;
     layoutAndResize();
     ShowWindow(hwnd_, SW_SHOWNOACTIVATE);
-    if (animationsEnabled_) SetTimer(hwnd_, kTideTimer, 33, nullptr);
+    // Match macOS: full motion gets the particle tide; reduced-motion mode
+    // still gets a low-motion activity indicator instead of static text.
+    SetTimer(hwnd_, kTideTimer, animationsEnabled_ ? 33 : 160, nullptr);
     installDismissMonitors();
 }
 
@@ -109,7 +111,7 @@ void PopupWindow::appendDelta(const std::wstring& delta) {
     if (!hwnd_) return;
     translation_ += delta;
     loading_ = false;
-    tidePhase_ = animationsEnabled_ ? TidePhase::Flowing : TidePhase::Complete;
+    tidePhase_ = TidePhase::Flowing;
     layoutAndResize();
     InvalidateRect(hwnd_, nullptr, TRUE);
 }
@@ -123,6 +125,7 @@ void PopupWindow::finishTranslation() {
         SetTimer(hwnd_, kTideTimer, 33, nullptr);
     } else {
         tidePhase_ = TidePhase::Complete;
+        KillTimer(hwnd_, kTideTimer);
     }
     InvalidateRect(hwnd_, nullptr, FALSE);
 }
@@ -149,7 +152,7 @@ void PopupWindow::resetForRetranslate() {
     loading_ = true;
     tidePhase_ = TidePhase::Waiting;
     tideTick_ = settleTicks_ = 0;
-    if (animationsEnabled_) SetTimer(hwnd_, kTideTimer, 33, nullptr);
+    SetTimer(hwnd_, kTideTimer, animationsEnabled_ ? 33 : 160, nullptr);
     layoutAndResize();
     InvalidateRect(hwnd_, nullptr, TRUE);
 }
@@ -346,9 +349,9 @@ void PopupWindow::paint(HDC dc) {
     RestoreDC(dc, saved);
 
     // 点阵潮汐：等待/流式输出时循环，完成时快速扫过一次后停下。
-    const bool tideActive = animationsEnabled_ &&
-        (tidePhase_ == TidePhase::Waiting || tidePhase_ == TidePhase::Flowing ||
-         tidePhase_ == TidePhase::Settling);
+    const bool activityActive = tidePhase_ == TidePhase::Waiting ||
+        tidePhase_ == TidePhase::Flowing || tidePhase_ == TidePhase::Settling;
+    const bool tideActive = animationsEnabled_ && activityActive;
     if (tideActive && clipText.right > clipText.left) {
         saved = SaveDC(dc);
         IntersectClipRect(dc, clipText.left, clipText.top, clipText.right, clipText.bottom);
@@ -375,11 +378,34 @@ void PopupWindow::paint(HDC dc) {
         }
         SelectObject(dc, oldPen);
         RestoreDC(dc, saved);
-    } else if (!animationsEnabled_ && loading_) {
+    } else if (!animationsEnabled_ && activityActive) {
+        // Reduced-motion fallback. Windows can disable client-area animation
+        // for accessibility, remote sessions, or the global Animation effects
+        // switch. Keep the content stable, but show a gently stepping three-dot
+        // activity indicator like macOS's reduced-motion ProgressView.
         SelectObject(dc, fontSmall_);
         SetTextColor(dc, th.secondary);
         RECT progress{clipText.left, clipText.bottom - px(18), clipText.right, clipText.bottom};
-        DrawTextW(dc, L"Translating…", -1, &progress, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+        if (translation_.empty()) {
+            progress.right -= px(34);
+            DrawTextW(dc, L"Translating", -1, &progress,
+                      DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+        }
+        const int activeDot = static_cast<int>((tideTick_ / 2) % 3);
+        const int dotY = progress.top + (progress.bottom - progress.top) / 2;
+        const int firstX = clipText.right - px(25);
+        HPEN oldPen = (HPEN)SelectObject(dc, GetStockObject(NULL_PEN));
+        for (int i = 0; i < 3; ++i) {
+            const COLORREF color = i == activeDot ? ui::Accent : th.buttonBorder;
+            HBRUSH dot = CreateSolidBrush(color);
+            HBRUSH old = (HBRUSH)SelectObject(dc, dot);
+            const int radius = px(i == activeDot ? 3 : 2);
+            const int x = firstX + px(i * 9);
+            Ellipse(dc, x - radius, dotY - radius, x + radius + 1, dotY + radius + 1);
+            SelectObject(dc, old);
+            DeleteObject(dot);
+        }
+        SelectObject(dc, oldPen);
     }
     if (textHeight_ > viewportHeight_) {
         const int trackTop = headerH + 1 + padY;
